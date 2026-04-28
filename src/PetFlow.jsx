@@ -1,4 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { doc, setDoc, onSnapshot } from "firebase/firestore";
+import { firestoreDb } from "./firebase";
+
+const DB_REF = doc(firestoreDb, "petflow", "state");
 
 // Coloca tu imagen en public/logo.png (o cambia la ruta aquí)
 const LOGO_SRC = "/logo.png";
@@ -3778,10 +3782,44 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
 };
 
 export default function PetFlow() {
-  const [auth, setAuth] = useState(null);
-  const [db, setDb] = useState(INITIAL_DB);
+  const [auth, setAuth]     = useState(null);
+  const [db, setDb]         = useState(INITIAL_DB);
+  const [dbReady, setDbReady] = useState(false);
+  const syncTimer  = useRef(null);
+  const fromRemote = useRef(false);
 
-  useEffect(() => { initPush(); }, []);
+  // Carga inicial + escucha cambios en tiempo real desde Firestore
+  useEffect(() => {
+    initPush();
+    const unsub = onSnapshot(DB_REF, (snap) => {
+      if (snap.exists()) {
+        fromRemote.current = true;
+        setDb(snap.data());
+      } else {
+        // Primera vez: siembra la BD con los datos iniciales
+        setDoc(DB_REF, INITIAL_DB);
+      }
+      setDbReady(true);
+    }, () => {
+      // Si Firestore falla, trabaja en memoria
+      setDbReady(true);
+    });
+    return () => unsub();
+  }, []);
+
+  // Cada vez que db cambia por una acción local, sincroniza a Firestore (debounce 1 s)
+  useEffect(() => {
+    if (!dbReady || fromRemote.current) { fromRemote.current = false; return; }
+    clearTimeout(syncTimer.current);
+    syncTimer.current = setTimeout(() => setDoc(DB_REF, db).catch(() => {}), 1000);
+  }, [db, dbReady]);
+
+  if (!dbReady) return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "Inter, sans-serif", color: "#6b7280", gap: 16 }}>
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3f8fb0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg>
+      <span style={{ fontSize: 15, fontWeight: 600 }}>Cargando PetFlow…</span>
+    </div>
+  );
 
   return (
     <>
