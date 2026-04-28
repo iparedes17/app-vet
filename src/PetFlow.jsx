@@ -1974,7 +1974,11 @@ const Login = ({ onLogin, db }) => {
           {error && <div style={{ background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.3)", borderRadius: 14, padding: 14, color: T.rose, fontSize: 14, fontWeight: 600 }}>⚠ {error}</div>}
           <button className="btn-primary" style={{ width: "100%", height: 52, fontSize: 15 }} onClick={handleLogin}>Entrar</button>
         </div>
-        <div style={{ marginTop: 28, padding: 16, background: "rgba(63,143,176,0.05)", borderRadius: 14 }}><p style={{ fontSize: 12, color: T.tx3, marginBottom: 8 }}>Credenciales de acceso:</p><code style={{ fontSize: 12, color: T.tx1, fontWeight: 600 }}>superadmin@petflow.io / super123</code></div>
+        <div style={{ marginTop: 28, textAlign: "center" }}>
+          <p style={{ fontSize: 13, color: T.tx3, fontStyle: "italic", lineHeight: 1.6 }}>
+            "Cuidar a un animal es cuidar un pedazo de vida que confía en ti sin condiciones."
+          </p>
+        </div>
       </div>
     </div>
   );
