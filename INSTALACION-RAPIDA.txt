@@ -1,0 +1,128 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    🐾 PETFLOW - GUÍA DE INSTALACIÓN RÁPIDA                   ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+📦 PASO 1: ORGANIZA TUS ARCHIVOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Crea esta estructura de carpetas:
+
+📁 petflow-app/
+  ├── 📄 index.html
+  ├── 📄 package.json
+  ├── 📄 vite.config.js
+  ├── 📄 .gitignore
+  ├── 📄 README.md
+  └── 📁 src/
+      ├── 📄 main.jsx
+      └── 📄 PetFlow.jsx
+
+IMPORTANTE: 
+- Crea la carpeta "src" 
+- Mueve main.jsx y PetFlow.jsx DENTRO de src/
+
+
+⚙️ PASO 2: INSTALA NODE.JS (si no lo tienes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Ve a: https://nodejs.org/
+2. Descarga la versión LTS (recomendada)
+3. Instálalo (siguiente, siguiente, finalizar)
+4. Verifica en terminal: node --version
+
+
+💻 PASO 3: ABRE LA TERMINAL EN TU CARPETA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Windows:
+  - Abre la carpeta petflow-app en el explorador
+  - Escribe "cmd" en la barra de direcciones
+  - Presiona Enter
+
+Mac/Linux:
+  - Abre Terminal
+  - Escribe: cd ruta/a/tu/carpeta/petflow-app
+  - Presiona Enter
+
+
+📥 PASO 4: INSTALA DEPENDENCIAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+En la terminal, escribe:
+
+npm install
+
+Espera 1-2 minutos mientras se descargan las dependencias.
+Verás que se crea una carpeta "node_modules" (es normal).
+
+
+🚀 PASO 5: EJECUTA LA APLICACIÓN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+En la misma terminal, escribe:
+
+npm run dev
+
+¡LISTO! Tu navegador se abrirá automáticamente en:
+http://localhost:3000
+
+
+🔑 CREDENCIALES DE ACCESO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+👑 SUPER ADMIN
+   Email: superadmin@petflow.io
+   Pass:  super123
+
+🏥 VETERINARIO
+   Email: dr.martinez@clinicaluna.com
+   Pass:  luna123
+
+👤 CLIENTE
+   Email: ivan.paredes@gmail.com
+   Pass:  ivan123
+
+
+🛑 PARA DETENER LA APLICACIÓN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+En la terminal presiona: Ctrl + C
+
+
+✅ CHECKLIST DE VERIFICACIÓN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+□ Node.js instalado (node --version funciona)
+□ Archivos en sus carpetas correctas
+□ Carpeta "src" creada con main.jsx y PetFlow.jsx dentro
+□ Terminal abierta en la carpeta petflow-app
+□ npm install ejecutado (carpeta node_modules existe)
+□ npm run dev ejecutado
+□ Navegador abierto en localhost:3000
+
+
+⚠️ PROBLEMAS COMUNES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ "npm no se reconoce como comando"
+   → Instala Node.js desde nodejs.org
+
+❌ "Cannot find module"
+   → Verifica que main.jsx y PetFlow.jsx estén en carpeta src/
+
+❌ "Port 3000 already in use"
+   → Cierra otras apps en puerto 3000 o cambia el puerto en vite.config.js
+
+❌ Pantalla en blanco
+   → Abre consola del navegador (F12) y revisa errores
+
+
+📞 AYUDA ADICIONAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Lee el archivo README.md para más detalles y personalización.
+
+
+════════════════════════════════════════════════════════════════════════════════
+                    ¡Disfruta de PetFlow! 🐾
+════════════════════════════════════════════════════════════════════════════════
