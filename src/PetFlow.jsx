@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
 import { firestoreDb } from "./firebase";
+import emailjs from "@emailjs/browser";
 
 const DB_REF = doc(firestoreDb, "petflow", "state");
 
@@ -34,14 +35,55 @@ const T = {
   tx1: "#1e293b", tx2: "#475569", tx3: "#94a3b8",
 };
 
+const DEFAULT_EMAIL_TEMPLATES = {
+  // → Cliente
+  cumpleanos:        { subject: "🎂 ¡Hoy cumple años {mascota}!",              body: "Hola {cliente}, tu mascota {mascota} ({especie}) está de cumpleaños hoy. ¡Felicítala! 🎉" },
+  vacunas:           { subject: "💉 Próxima dosis: {medicamento}",              body: "Hola, {mascota} necesita {medicamento} el {proximaDosis}. Por favor agenda una cita." },
+  vacunasVencida:    { subject: "⚠️ Dosis vencida: {medicamento}",              body: "La dosis de {medicamento} para {mascota} venció el {proximaDosis}. ¡Agenda una cita pronto!" },
+  diaPerro:          { subject: "🐶 ¡Hoy es el Día del Perro!",                 body: "Hoy, 21 de julio, celebramos a todos los perros del mundo. ¡Dales mucho amor! 🐾" },
+  diaGato:           { subject: "🐱 ¡Hoy es el Día Internacional del Gato!",    body: "Hoy, 8 de agosto, es el día de los felinos. ¡Mímalos con sus snacks favoritos! 😺" },
+  diasEspeciales:    { subject: "🌍 Día Mundial de los Animales",                body: "Hoy, 4 de octubre, honramos a todos los animales. ¡Abraza a tu mascota! 🐾" },
+  citaConfirmada:    { subject: "✅ Tu cita fue confirmada",                      body: "Hola {cliente}, tu cita del {fecha} a las {hora} ({motivo}) ha sido confirmada. ¡Te esperamos!" },
+  citaCancelada:     { subject: "❌ Tu cita fue cancelada",                       body: "Hola {cliente}, tu cita del {fecha} a las {hora} ({motivo}) fue cancelada. Por favor reagenda cuando gustes." },
+  citaReprogramada:  { subject: "📅 Tu cita fue reprogramada",                    body: "Hola {cliente}, tu cita ha sido reprogramada para el {fecha} a las {hora} ({motivo}). ¡Te esperamos!" },
+  recordatorioMed:   { subject: "💊 Recordatorio: {medicamento}",                body: "{medicamento}{dosis} programado a las {hora} para {mascota} no fue marcado como administrado." },
+  // → Veterinaria
+  diaVeterinario:    { subject: "🩺 ¡Feliz Día del Veterinario!",                body: "Hoy, 7 de junio, celebramos a quienes dedican su vida al cuidado de los animales. ¡Gracias por su labor!" },
+  citaNueva:         { subject: "📅 Nueva cita solicitada",                       body: "{cliente} agendó una cita para el {fecha} a las {hora}: {motivo}." },
+  citaCanceladaVet:  { subject: "❌ Cita cancelada — aviso al equipo",            body: "La cita de {cliente} del {fecha} a las {hora} ({motivo}) fue cancelada." },
+  citaReprogramadaVet: { subject: "📅 Cita reprogramada — aviso al equipo",      body: "La cita de {cliente} fue reprogramada para el {fecha} a las {hora} ({motivo})." },
+  vacunasVencidaVet: { subject: "⚠️ Dosis vencida en paciente: {mascota}",       body: "{mascota} (cliente: {cliente}) tiene la dosis de {medicamento} vencida desde el {proximaDosis}. Considera contactar al cliente." },
+};
+
+const EMAIL_TEMPLATE_META = [
+  // Al cliente
+  { key: "cumpleanos",       label: "Cumpleaños de mascota",         vars: "{mascota}  {especie}  {cliente}",              dest: "Cliente"     },
+  { key: "vacunas",          label: "Vacuna próxima (≤30 días)",     vars: "{mascota}  {medicamento}  {proximaDosis}",      dest: "Cliente"     },
+  { key: "vacunasVencida",   label: "Vacuna vencida",                vars: "{mascota}  {medicamento}  {proximaDosis}",      dest: "Cliente"     },
+  { key: "diaPerro",         label: "Día del Perro (21 Jul)",        vars: "—",                                             dest: "Cliente"     },
+  { key: "diaGato",          label: "Día del Gato (8 Ago)",          vars: "—",                                             dest: "Cliente"     },
+  { key: "diasEspeciales",   label: "Día Mundial Animales (4 Oct)",  vars: "—",                                             dest: "Cliente"     },
+  { key: "citaConfirmada",   label: "Cita confirmada",               vars: "{cliente}  {fecha}  {hora}  {motivo}",          dest: "Cliente"     },
+  { key: "citaCancelada",    label: "Cita cancelada",                vars: "{cliente}  {fecha}  {hora}  {motivo}",          dest: "Cliente"     },
+  { key: "citaReprogramada", label: "Cita reprogramada",             vars: "{cliente}  {fecha}  {hora}  {motivo}",          dest: "Cliente"     },
+  { key: "recordatorioMed",  label: "Recordatorio medicamento",      vars: "{medicamento}  {dosis}  {hora}  {mascota}",     dest: "Cliente"     },
+  // A la veterinaria
+  { key: "diaVeterinario",   label: "Día del Veterinario (7 Jun)",   vars: "—",                                             dest: "Veterinaria" },
+  { key: "citaNueva",        label: "Nueva cita del cliente",        vars: "{cliente}  {fecha}  {hora}  {motivo}",          dest: "Veterinaria" },
+  { key: "citaCanceladaVet",    label: "Cita cancelada (aviso equipo)",    vars: "{cliente}  {fecha}  {hora}  {motivo}",  dest: "Veterinaria" },
+  { key: "citaReprogramadaVet", label: "Cita reprogramada (aviso equipo)", vars: "{cliente}  {fecha}  {hora}  {motivo}",  dest: "Veterinaria" },
+  { key: "vacunasVencidaVet",label: "Vacuna vencida (aviso equipo)", vars: "{mascota}  {cliente}  {medicamento}  {proximaDosis}", dest: "Veterinaria" },
+];
+
 const NOTIF_TYPES = [
-  { key: "cumpleanos",      iconKey: "cake",    label: "Cumpleaños de mascotas",       desc: "El día del cumpleaños de cada mascota" },
-  { key: "vacunas",         iconKey: "vacunas", label: "Vacunas pendientes",            desc: "30 días antes del vencimiento" },
-  { key: "citas",           iconKey: "citas",   label: "Confirmación de citas",         desc: "Al confirmar, completar o cancelar" },
-  { key: "diaPerro",        iconKey: "dog",     label: "Día del Perro (21 Jul)",        desc: "Recordatorio anual automático" },
-  { key: "diaGato",         iconKey: "cat",     label: "Día del Gato (8 Ago)",          desc: "Recordatorio anual automático" },
-  { key: "recordatorioMed", iconKey: "pill",    label: "Recordatorio de medicamentos",  desc: "Dosis no marcadas como administradas" },
-  { key: "diasEspeciales",  iconKey: "globe",   label: "Día Mundial Animales (4 Oct)",  desc: "Días internacionales destacados" },
+  { key: "cumpleanos",      iconKey: "cake",    label: "Cumpleaños de mascotas",        desc: "El día del cumpleaños de cada mascota" },
+  { key: "vacunas",         iconKey: "vacunas", label: "Vacunas pendientes",             desc: "30 días antes del vencimiento" },
+  { key: "citas",           iconKey: "citas",   label: "Confirmación de citas",          desc: "Al confirmar, completar o cancelar" },
+  { key: "diaPerro",        iconKey: "dog",     label: "Día del Perro (21 Jul)",         desc: "Notificación al cliente" },
+  { key: "diaGato",         iconKey: "cat",     label: "Día del Gato (8 Ago)",           desc: "Notificación al cliente" },
+  { key: "diaVeterinario",  iconKey: "admins",  label: "Día del Veterinario (7 Jun)",    desc: "Recordatorio a la veterinaria" },
+  { key: "recordatorioMed", iconKey: "pill",    label: "Recordatorio de medicamentos",   desc: "Dosis no marcadas como administradas" },
+  { key: "diasEspeciales",  iconKey: "globe",   label: "Día Mundial Animales (4 Oct)",   desc: "Notificación al cliente" },
 ];
 
 const initPush = async () => {
@@ -81,12 +123,37 @@ const markPushSent = (key) => {
   } catch {}
 };
 
+const emailAlreadySent = (key) => pushAlreadySent(`em_${key}`);
+const markEmailSent    = (key) => markPushSent(`em_${key}`);
+
+const sendEmail = async (cfg, to, subject, message) => {
+  if (!cfg?.serviceId || !cfg?.templateId || !cfg?.publicKey || !to) return;
+  try {
+    await emailjs.send(cfg.serviceId, cfg.templateId, {
+      to_email:  to,
+      subject,
+      message,
+      from_name: cfg.fromName || "PetFlow",
+    }, cfg.publicKey);
+  } catch (e) { console.error("EmailJS error:", e); }
+};
+
+const applyTemplate = (tpl = "", vars = {}) =>
+  Object.entries(vars).reduce((s, [k, v]) => s.replaceAll(`{${k}}`, v ?? ""), tpl);
+
+const sendEmailTpl = (cfg, to, tplKey, vars = {}) => {
+  const tpl     = { ...DEFAULT_EMAIL_TEMPLATES[tplKey], ...(cfg?.templates?.[tplKey] || {}) };
+  const subject = applyTemplate(tpl.subject || tplKey, vars);
+  const body    = applyTemplate(tpl.body    || "",     vars);
+  sendEmail(cfg, to, subject, body);
+};
+
 const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
 const INITIAL_DB = {
   users: { superadmin: { id: "sa", email: "superadmin@petflow.io", password: "super123", role: "superadmin" } },
   empresas: {
-    emp_001: { id: "emp_001", nombre: "Veterinaria San Francisco", nit: "900123456-1", telefono: "+57 300 123 4567", email: "contacto@sanfrancisco.com", direccion: "Calle 45 #23-10, Bogotá", notificaciones: { cumpleanos: true, diaPerro: true, diaGato: false, vacunas: true, citas: true, recordatorioMed: true, diasEspeciales: true } },
+    emp_001: { id: "emp_001", nombre: "Veterinaria San Francisco", nit: "900123456-1", telefono: "+57 300 123 4567", email: "contacto@sanfrancisco.com", direccion: "Calle 45 #23-10, Bogotá", notificaciones: { cumpleanos: true, diaPerro: true, diaGato: false, vacunas: true, citas: true, recordatorioMed: true, diasEspeciales: true, diaVeterinario: true, emailEnabled: false, notifEmail: "" } },
   },
   sedes: {
     sede_001: { id: "sede_001", empresaId: "emp_001", nombre: "Sede Principal", direccion: "Calle 45 #23-10, Bogotá", telefono: "+57 300 123 4567", horarios: [
@@ -118,6 +185,7 @@ const INITIAL_DB = {
     hist_003: { id: "hist_003", mascotaId: "masc_001", clienteId: "cli_001", empresaId: "emp_001", fecha: "2025-09-20", tipo: "Cirugía", descripcion: "Esterilización", veterinario: "Dra. López", diagnostico: "Procedimiento exitoso", tratamientos: ["Cirugía (Perros y Gatos)", "Reposo (Perros y Gatos)"], medicamentos: [{ nombre: "Amoxicilina (Perros y Gatos)", dosis: "250mg — 1 cápsula", frecuencia: "Cada 12 horas", duracion: "7 días" }, { nombre: "Meloxicam (Perros y Gatos)", dosis: "0.5ml", frecuencia: "Una vez al día", duracion: "3 días" }], notas: "Usar collar isabelino hasta retirar puntos.", peso: "3.9 kg" },
   },
   ajustes: {
+    email: { serviceId: "", templateId: "", publicKey: "", fromName: "PetFlow" },
     tratamientos: [
       "Antibioticoterapia (Perros y Gatos)", "Desparasitación interna (Perros y Gatos)", "Desparasitación externa (Perros y Gatos)",
       "Vacunación (Perros y Gatos)", "Fluidoterapia (Perros y Gatos)", "Reposo (Perros y Gatos)", "Dieta especial (Perros y Gatos)",
@@ -223,7 +291,7 @@ const Toggle = ({ checked, onChange }) => (
 );
 
 const ModalEmpresa = ({ empresa, onSave, onClose }) => {
-  const [form, setForm] = useState(empresa || { nombre: "", nit: "", telefono: "", email: "", direccion: "", notificaciones: { cumpleanos: true, diaPerro: true, diaGato: true, vacunas: true, citas: true } });
+  const [form, setForm] = useState(empresa || { nombre: "", nit: "", telefono: "", email: "", direccion: "", notificaciones: { cumpleanos: true, diaPerro: true, diaGato: true, vacunas: true, citas: true, diaVeterinario: true, recordatorioMed: true, diasEspeciales: true } });
   const handleSave = () => { if (!form.nombre || !form.nit) { alert("Nombre y NIT son obligatorios"); return; } onSave(form); };
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -261,6 +329,21 @@ const ModalEmpresa = ({ empresa, onSave, onClose }) => {
               </div>
             ))}
           </div>
+        </div>
+        <div className="inset" style={{ padding: 20, marginBottom: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: T.tx1, marginBottom: 2 }}>Notificaciones por Correo</h3>
+              <p style={{ fontSize: 11, color: T.tx3 }}>Usa los mismos tipos habilitados en Push. Requiere configurar EmailJS en Ajustes.</p>
+            </div>
+            <Toggle checked={!!(form.notificaciones?.emailEnabled)} onChange={v => setForm({ ...form, notificaciones: { ...(form.notificaciones || {}), emailEnabled: v } })} />
+          </div>
+          {form.notificaciones?.emailEnabled && (
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 6 }}>EMAIL QUE RECIBIRÁ LAS NOTIFICACIONES</label>
+              <input className="input" type="email" value={form.notificaciones?.notifEmail || ""} onChange={e => setForm({ ...form, notificaciones: { ...(form.notificaciones || {}), notifEmail: e.target.value } })} placeholder="veterinaria@tudominio.com" />
+            </div>
+          )}
         </div>
         <div style={{ display: "flex", gap: 12 }}>
           <button className="btn-primary" style={{ flex: 1 }} onClick={handleSave}>{empresa ? "Guardar Cambios" : "Crear Empresa"}</button>
@@ -1357,8 +1440,13 @@ const ListaAjuste = ({ title, items, onAdd, onRemove }) => {
 const TabAjustes = ({ ajustes, onSave }) => {
   const [trats, setTrats] = useState([...(ajustes?.tratamientos || [])]);
   const [meds,  setMeds]  = useState([...(ajustes?.medicamentos  || [])]);
+  const [email, setEmail] = useState({ serviceId: "", templateId: "", publicKey: "", fromName: "PetFlow", templates: {}, ...(ajustes?.email || {}) });
+  const fe = (k, v) => setEmail(p => ({ ...p, [k]: v }));
+  const setTpl = (tplKey, field, val) => setEmail(p => ({ ...p, templates: { ...p.templates, [tplKey]: { ...(DEFAULT_EMAIL_TEMPLATES[tplKey] || {}), ...(p.templates?.[tplKey] || {}), [field]: val } } }));
+  const getTpl = (tplKey, field) => email.templates?.[tplKey]?.[field] ?? DEFAULT_EMAIL_TEMPLATES[tplKey]?.[field] ?? "";
+  const [expandedTpl, setExpandedTpl] = useState(null);
 
-  const handleSave = () => { onSave({ tratamientos: trats, medicamentos: meds }); alert("✓ Ajustes guardados"); };
+  const handleSave = () => { onSave({ tratamientos: trats, medicamentos: meds, email }); alert("✓ Ajustes guardados"); };
 
   return (
     <div>
@@ -1366,7 +1454,82 @@ const TabAjustes = ({ ajustes, onSave }) => {
         <h2 style={{ fontSize: 24, fontWeight: 700, color: T.tx1 }}>Ajustes</h2>
         <button className="btn-primary" onClick={handleSave}>Guardar Ajustes</button>
       </div>
-      <p style={{ fontSize: 14, color: T.tx2, marginBottom: 28 }}>Configura las listas disponibles en el historial médico. Usa "Ver lista ▼" para expandir y gestionar cada lista.</p>
+      <p style={{ fontSize: 14, color: T.tx2, marginBottom: 28 }}>Configura las listas del historial médico y el servicio de correo para notificaciones.</p>
+
+      {/* Correo de notificaciones */}
+      <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+          <div className="inset" style={{ width: 36, height: 36, borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", color: T.primary, flexShrink: 0 }}>{Icons.bell}</div>
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: T.tx1 }}>Correo de Notificaciones (EmailJS)</h3>
+            <p style={{ fontSize: 11, color: T.tx3, marginTop: 2 }}>Crea tu cuenta gratuita en <strong>emailjs.com</strong>, conecta tu correo con dominio propio y pega aquí las credenciales.</p>
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16, marginTop: 18 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 6 }}>SERVICE ID</label>
+            <input className="input" value={email.serviceId} onChange={e => fe("serviceId", e.target.value)} placeholder="service_xxxxxxx" />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 6 }}>TEMPLATE ID</label>
+            <input className="input" value={email.templateId} onChange={e => fe("templateId", e.target.value)} placeholder="template_xxxxxxx" />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 6 }}>PUBLIC KEY</label>
+            <input className="input" value={email.publicKey} onChange={e => fe("publicKey", e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxx" />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 6 }}>NOMBRE REMITENTE</label>
+            <input className="input" value={email.fromName} onChange={e => fe("fromName", e.target.value)} placeholder="PetFlow" />
+          </div>
+        </div>
+      </div>
+
+      {/* Plantillas de mensajes */}
+      <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+          <div className="inset" style={{ width: 36, height: 36, borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", color: T.primary, flexShrink: 0 }}>{Icons.historial}</div>
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: T.tx1 }}>Mensajes de Notificación</h3>
+            <p style={{ fontSize: 11, color: T.tx3, marginTop: 2 }}>Personaliza el asunto y cuerpo de cada correo. Usa las variables entre llaves para insertar datos reales.</p>
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {["Veterinaria", "Cliente"].map(dest => (
+            <div key={dest}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: T.tx3, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6, marginTop: dest === "Cliente" ? 12 : 0 }}>→ Se envía al: {dest}</div>
+              {EMAIL_TEMPLATE_META.filter(t => t.dest === dest).map(meta => {
+                const open = expandedTpl === meta.key;
+                return (
+                  <div key={meta.key} className="inset" style={{ borderRadius: 14, overflow: "hidden" }}>
+                    <button onClick={() => setExpandedTpl(open ? null : meta.key)} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: T.tx1 }}>{meta.label}</span>
+                        {meta.vars !== "—" && <span style={{ fontSize: 10, color: T.tx3, background: T.bg, borderRadius: 6, padding: "2px 7px", fontFamily: "monospace", whiteSpace: "nowrap" }}>{meta.vars}</span>}
+                      </div>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.tx3} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                    {open && (
+                      <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 5 }}>ASUNTO</label>
+                          <input className="input" style={{ fontSize: 13 }} value={getTpl(meta.key, "subject")} onChange={e => setTpl(meta.key, "subject", e.target.value)} placeholder={DEFAULT_EMAIL_TEMPLATES[meta.key]?.subject} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 5 }}>MENSAJE</label>
+                          <textarea className="input" rows={3} style={{ resize: "vertical", fontSize: 13 }} value={getTpl(meta.key, "body")} onChange={e => setTpl(meta.key, "body", e.target.value)} placeholder={DEFAULT_EMAIL_TEMPLATES[meta.key]?.body} />
+                        </div>
+                        <button className="btn" style={{ alignSelf: "flex-start", padding: "5px 14px", fontSize: 11 }} onClick={() => setTpl(meta.key, "subject", DEFAULT_EMAIL_TEMPLATES[meta.key]?.subject) || setTpl(meta.key, "body", DEFAULT_EMAIL_TEMPLATES[meta.key]?.body)}>Restaurar original</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 24 }}>
         <ListaAjuste title="Tratamientos" items={trats} onAdd={v => setTrats(p => [...p, v])} onRemove={i => setTrats(p => p.filter((_, j) => j !== i))} />
         <ListaAjuste title="Medicamentos" items={meds}  onAdd={v => setMeds(p => [...p, v])}  onRemove={i => setMeds(p => p.filter((_, j) => j !== i))} />
@@ -1397,55 +1560,98 @@ const NotifPermissionBanner = () => {
   );
 };
 
-const usePushEngine = (db, empresa) => {
-  const notifCfg = empresa?.notificaciones || {};
+// clienteId: si se pasa, filtra solo las mascotas/vacunas de ese cliente (panel cliente)
+//            si es null, incluye todas las de la empresa (panel admin)
+const usePushEngine = (db, empresa, clienteId = null) => {
+  const notifCfg   = empresa?.notificaciones || {};
+  const emailCfg   = db.ajustes?.email;
+  const notifEmail = notifCfg.notifEmail;
+  const emailOn    = !!(notifCfg.emailEnabled && emailCfg?.serviceId && notifEmail);
+  const empresaId  = empresa?.id;
+
   useEffect(() => {
-    if (!("Notification" in window) || Notification.permission !== "granted") return;
-    const today = new Date().toISOString().slice(0, 10);
-    const mmdd  = today.slice(5);
+    if (!empresaId) return;
+    const pushOn = ("Notification" in window) && Notification.permission === "granted";
+    const today  = new Date().toISOString().slice(0, 10);
+    const mmdd   = today.slice(5);
+
+    // Solo mascotas de esta empresa; si es panel cliente, solo las suyas
+    const mascotas = Object.values(db.mascotas || {}).filter(m =>
+      m.empresaId === empresaId && (!clienteId || m.clienteId === clienteId)
+    );
+    // Solo vacunas de esta empresa; si es panel cliente, solo las de sus mascotas
+    const mascIds = new Set(mascotas.map(m => m.id));
+    const vacunas = Object.values(db.vacunas || {}).filter(v =>
+      v.empresaId === empresaId && (!clienteId || mascIds.has(v.mascotaId))
+    );
+
+    const clientEmail = (cId) => db.clientes?.[cId]?.email || null;
 
     if (notifCfg.cumpleanos) {
-      Object.values(db.mascotas || {}).forEach(masc => {
-        if (!masc.fechaCumpleanos) return;
-        if (masc.fechaCumpleanos.slice(5) !== mmdd) return;
-        const key = `cumple_${masc.id}`;
-        if (pushAlreadySent(key)) return;
-        const cli = db.clientes?.[masc.clienteId];
-        sendPush(`🎂 ¡Hoy cumple años ${masc.nombre}!`, `${masc.nombre} (${masc.especie}) de ${cli ? `${cli.nombres} ${cli.apellidos}` : "un cliente"} festeja hoy. ¡Felicítalo! 🎉`, key);
-        markPushSent(key);
+      mascotas.forEach(masc => {
+        if (!masc.fechaCumpleanos || masc.fechaCumpleanos.slice(5) !== mmdd) return;
+        const key   = `cumple_${masc.id}`;
+        const cli   = db.clientes?.[masc.clienteId];
+        const title = `🎂 ¡Hoy cumple años ${masc.nombre}!`;
+        const body  = `${masc.nombre} (${masc.especie}) de ${cli ? `${cli.nombres} ${cli.apellidos}` : "un cliente"} festeja hoy. ¡Felicítalo! 🎉`;
+        const vars  = { mascota: masc.nombre, especie: masc.especie, cliente: cli ? `${cli.nombres} ${cli.apellidos}` : "un cliente" };
+        if (pushOn && !pushAlreadySent(key)) { sendPush(title, body, key); markPushSent(key); }
+        // Email → al cliente propietario de la mascota
+        const toEmail = clientEmail(masc.clienteId);
+        if (emailOn && toEmail && !emailAlreadySent(key)) { sendEmailTpl(emailCfg, toEmail, "cumpleanos", vars); markEmailSent(key); }
       });
     }
 
+    // Días especiales → al cliente; en panel admin se usa notifEmail como recordatorio al equipo
     const specialDays = [
-      { mmdd: "07-21", key: "dia_perro",   cfg: "diaPerro",       title: "🐶 ¡Día Internacional del Perro!", body: "Hoy celebramos a todos los perros del mundo. ¡Dales mucho amor! 🐾" },
-      { mmdd: "08-08", key: "dia_gato",    cfg: "diaGato",        title: "🐱 ¡Día Internacional del Gato!", body: "Hoy es el día de los felinos. ¡Mímalo con sus snacks favoritos! 😺" },
-      { mmdd: "10-04", key: "dia_animales",cfg: "diasEspeciales",  title: "🌍 Día Mundial de los Animales", body: "Hoy honramos a todos los animales. ¡Abraza a tu mascota! 🐾" },
+      { mmdd: "07-21", key: "dia_perro",    cfg: "diaPerro",       tplKey: "diaPerro",       title: "🐶 ¡Día Internacional del Perro!", body: "Hoy celebramos a todos los perros del mundo. ¡Dales mucho amor! 🐾" },
+      { mmdd: "08-08", key: "dia_gato",     cfg: "diaGato",        tplKey: "diaGato",         title: "🐱 ¡Día Internacional del Gato!", body: "Hoy es el día de los felinos. ¡Mímalo con sus snacks favoritos! 😺" },
+      { mmdd: "10-04", key: "dia_animales", cfg: "diasEspeciales",  tplKey: "diasEspeciales",  title: "🌍 Día Mundial de los Animales",  body: "Hoy honramos a todos los animales. ¡Abraza a tu mascota! 🐾" },
     ];
-    specialDays.forEach(({ mmdd: d, key, cfg, title, body }) => {
+    specialDays.forEach(({ mmdd: d, key, cfg, tplKey, title, body }) => {
       if (mmdd !== d || !notifCfg[cfg]) return;
-      if (pushAlreadySent(key)) return;
-      sendPush(title, body, key);
-      markPushSent(key);
+      if (pushOn && !pushAlreadySent(key)) { sendPush(title, body, key); markPushSent(key); }
+      if (emailOn && !emailAlreadySent(key)) {
+        const toEmail = clienteId ? clientEmail(clienteId) : notifEmail;
+        if (toEmail) sendEmailTpl(emailCfg, toEmail, tplKey, {});
+        markEmailSent(key);
+      }
     });
 
+    // Día del veterinario → solo panel admin, solo a notifEmail
+    if (mmdd === "06-07" && notifCfg.diaVeterinario && !clienteId) {
+      const key = "dia_vet";
+      if (pushOn && !pushAlreadySent(key)) { sendPush("🩺 ¡Feliz Día del Veterinario!", "Hoy celebramos a quienes cuidan a nuestras mascotas. ¡Gracias! 🩺", key); markPushSent(key); }
+      if (emailOn && notifEmail && !emailAlreadySent(key)) { sendEmailTpl(emailCfg, notifEmail, "diaVeterinario", {}); markEmailSent(key); }
+    }
+
     if (notifCfg.vacunas) {
-      Object.values(db.vacunas || {}).forEach(v => {
+      vacunas.forEach(v => {
         if (!v.proximaDosis) return;
-        const diff = (new Date(v.proximaDosis + "T12:00:00") - new Date()) / 86400000;
+        const diff    = (new Date(v.proximaDosis + "T12:00:00") - new Date()) / 86400000;
         if (diff > 30 || diff < -1) return;
-        const key = `vac_push_${v.id}_${v.proximaDosis}`;
-        if (pushAlreadySent(key)) return;
-        const masc = db.mascotas?.[v.mascotaId];
-        const nombre = v.nombre.split(" (")[0];
+        const key     = `vac_push_${v.id}_${v.proximaDosis}`;
+        const masc    = db.mascotas?.[v.mascotaId];
+        const nombre  = v.nombre.split(" (")[0];
         const urgente = diff < 0;
-        sendPush(
-          urgente ? `⚠️ Dosis vencida: ${nombre}` : `💉 Próxima dosis: ${nombre}`,
-          urgente
-            ? `La dosis de ${nombre} para ${masc?.nombre || "una mascota"} venció el ${v.proximaDosis}. ¡Agenda una cita!`
-            : `${masc?.nombre || "Una mascota"} necesita ${nombre} el ${v.proximaDosis} (en ${Math.round(diff)} días).`,
-          key
-        );
-        markPushSent(key);
+        const title   = urgente ? `⚠️ Dosis vencida: ${nombre}` : `💉 Próxima dosis: ${nombre}`;
+        const body    = urgente
+          ? `La dosis de ${nombre} para ${masc?.nombre || "una mascota"} venció el ${v.proximaDosis}. ¡Agenda una cita!`
+          : `${masc?.nombre || "Una mascota"} necesita ${nombre} el ${v.proximaDosis} (en ${Math.round(diff)} días).`;
+        const cli  = db.clientes?.[v.clienteId];
+        const vars = { mascota: masc?.nombre || "una mascota", medicamento: nombre, proximaDosis: v.proximaDosis, cliente: cli ? `${cli.nombres} ${cli.apellidos}` : "un cliente" };
+        if (pushOn && !pushAlreadySent(key)) { sendPush(title, body, key); markPushSent(key); }
+        if (emailOn) {
+          const toCliente = clientEmail(v.clienteId);
+          if (urgente) {
+            // Vacuna vencida → al cliente Y a la veterinaria
+            if (toCliente && !emailAlreadySent(`${key}_cli`)) { sendEmailTpl(emailCfg, toCliente, "vacunasVencida", vars); markEmailSent(`${key}_cli`); }
+            if (notifEmail && !emailAlreadySent(`${key}_vet`)) { sendEmailTpl(emailCfg, notifEmail, "vacunasVencidaVet", vars); markEmailSent(`${key}_vet`); }
+          } else {
+            // Vacuna próxima → solo al cliente
+            if (toCliente && !emailAlreadySent(key)) { sendEmailTpl(emailCfg, toCliente, "vacunas", vars); markEmailSent(key); }
+          }
+        }
       });
     }
   }, []);
@@ -1942,9 +2148,10 @@ const PanelSuperAdmin = ({ onLogout, db, setDb }) => {
 };
 
 const Login = ({ onLogin, db }) => {
-  const [email, setEmail] = useState("");
+  const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError]       = useState("");
+
   const handleLogin = () => {
     const em = email.trim().toLowerCase();
     if (em === "superadmin@petflow.io" && password === "super123") {
@@ -1956,26 +2163,120 @@ const Login = ({ onLogin, db }) => {
     if (cli) { onLogin({ role: "cliente", email: em, id: cli.id, nombre: `${cli.nombres} ${cli.apellidos}` }); return; }
     setError("Credenciales incorrectas");
   };
+
+  const inpStyle = {
+    width: "100%", height: 50, borderRadius: 50,
+    background: "rgba(255,255,255,0.72)",
+    boxShadow: "inset 3px 3px 8px rgba(163,177,198,0.5), inset -3px -3px 8px rgba(255,255,255,0.9)",
+    border: "1px solid rgba(255,255,255,0.85)",
+    padding: "0 22px", fontSize: 14, color: T.tx1,
+    outline: "none", fontFamily: "Inter, sans-serif", fontWeight: 500,
+    backdropFilter: "blur(4px)",
+  };
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: T.bg }}>
       <style>{CSS}</style>
-      <div className="card login-card" style={{ width: "100%", maxWidth: 460, padding: "48px 44px" }}>
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{ marginBottom: 24, display: "flex", justifyContent: "center" }}>
-            <div style={{ width: 124, height: 124, borderRadius: 36, background: T.surface, boxShadow: "20px 20px 44px #b8c4d0, -20px -20px 44px #ffffff, inset 0 0 0 1px rgba(255,255,255,0.9)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <LogoImg size={112} />
+
+      {/* ── Tarjeta principal ── */}
+      <div style={{
+        width: "100%", maxWidth: 380,
+        background: T.surface,
+        borderRadius: 32,
+        boxShadow: "0 24px 64px rgba(0,0,0,0.13), 0 4px 16px rgba(0,0,0,0.07)",
+        border: "1px solid rgba(255,255,255,0.92)",
+        overflow: "hidden",
+        position: "relative",
+      }}>
+
+        {/* ── Zona orgánica blanca superior con SVG ── */}
+        <div style={{ position: "relative", height: 272 }}>
+          {/* Blob SVG */}
+          <svg viewBox="0 0 380 272" preserveAspectRatio="none"
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block" }}>
+            <defs>
+              <filter id="blobShadow" x="-10%" y="-10%" width="120%" height="130%">
+                <feDropShadow dx="0" dy="6" stdDeviation="10" floodColor="rgba(0,0,0,0.07)" />
+              </filter>
+            </defs>
+            {/* Forma orgánica blanca */}
+            <path
+              d="M0,32 C0,14 14,0 32,0 L348,0 C366,0 380,14 380,32
+                 L380,210
+                 C355,230 330,200 300,218
+                 C270,236 248,208 218,228
+                 C188,248 162,215 132,230
+                 C102,245  72,212  42,226
+                 C22,235   8,226   0,220
+                 Z"
+              fill="white"
+              filter="url(#blobShadow)"
+            />
+          </svg>
+
+          {/* Logo + nombre sobre el blob */}
+          <div style={{ position: "relative", zIndex: 1, paddingTop: 40, textAlign: "center" }}>
+            <div style={{
+              width: 116, height: 116, borderRadius: 30,
+              background: T.surface,
+              boxShadow: "14px 14px 30px #c0cad4, -14px -14px 30px #ffffff",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 16px",
+            }}>
+              <LogoImg size={100} />
             </div>
+            <h1 style={{ fontSize: 29, fontWeight: 800, color: "#4a5568", letterSpacing: -0.3 }}>PetFlow</h1>
           </div>
-          <h1 style={{ fontSize: 32, fontWeight: 800, color: T.tx1 }}>AnimalPet</h1><p style={{ color: T.tx3, fontSize: 15, marginTop: 8 }}></p>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <div><label style={{ fontSize: 13, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 8 }}>EMAIL</label><input className="input" type="email" value={email} onChange={e => { setEmail(e.target.value); setError(""); }} placeholder="superadmin@petflow.io" /></div>
-          <div><label style={{ fontSize: 13, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 8 }}>CONTRASEÑA</label><input className="input" type="password" value={password} onChange={e => { setPassword(e.target.value); setError(""); }} onKeyDown={e => e.key === "Enter" && handleLogin()} placeholder="••••••••" /><PasswordHint /></div>
-          {error && <div style={{ background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.3)", borderRadius: 14, padding: 14, color: T.rose, fontSize: 14, fontWeight: 600 }}>⚠ {error}</div>}
-          <button className="btn-primary" style={{ width: "100%", height: 52, fontSize: 15 }} onClick={handleLogin}>Entrar</button>
-        </div>
-        <div style={{ marginTop: 28, textAlign: "center" }}>
-          <p style={{ fontSize: 13, color: T.tx3, fontStyle: "italic", lineHeight: 1.6 }}>
+
+        {/* ── Formulario ── */}
+        <div style={{ padding: "10px 32px 36px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+            <div>
+              <label style={{ fontSize: 10.5, fontWeight: 700, color: T.tx3, letterSpacing: 1.5, display: "block", marginBottom: 7 }}>EMAIL</label>
+              <input style={inpStyle} type="email" value={email}
+                onChange={e => { setEmail(e.target.value); setError(""); }}
+                placeholder="correo@ejemplo.com" />
+            </div>
+
+            <div>
+              <label style={{ fontSize: 10.5, fontWeight: 700, color: T.tx3, letterSpacing: 1.5, display: "block", marginBottom: 7 }}>CONTRASEÑA</label>
+              <input style={inpStyle} type="password" value={password}
+                onChange={e => { setPassword(e.target.value); setError(""); }}
+                onKeyDown={e => e.key === "Enter" && handleLogin()}
+                placeholder="••••••••" />
+              <PasswordHint />
+            </div>
+
+            {error && (
+              <div style={{ background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.3)", borderRadius: 14, padding: 14, color: T.rose, fontSize: 14, fontWeight: 600 }}>
+                ⚠ {error}
+              </div>
+            )}
+
+            {/* Botón gloss */}
+            <button onClick={handleLogin} style={{
+              width: "100%", height: 52, borderRadius: 50,
+              background: `linear-gradient(135deg, ${T.primary} 0%, ${T.primaryLight} 100%)`,
+              color: "white", border: "none",
+              fontSize: 16, fontWeight: 700, letterSpacing: 0.5,
+              cursor: "pointer", fontFamily: "Inter, sans-serif",
+              boxShadow: `0 10px 30px rgba(63,143,176,0.5), 0 2px 8px rgba(63,143,176,0.3)`,
+              position: "relative", overflow: "hidden",
+              transition: "transform 0.18s, box-shadow 0.18s",
+            }}>
+              {/* brillo superior */}
+              <div style={{
+                position: "absolute", inset: "0 0 50% 0",
+                background: "linear-gradient(180deg, rgba(255,255,255,0.28) 0%, transparent 100%)",
+                borderRadius: "50px 50px 0 0", pointerEvents: "none",
+              }} />
+              Entrar
+            </button>
+          </div>
+
+          <p style={{ marginTop: 22, textAlign: "center", fontSize: 12, color: T.tx3, fontStyle: "italic", lineHeight: 1.7 }}>
             "Cuidar a un animal es cuidar un pedazo de vida que confía en ti sin condiciones."
           </p>
         </div>
@@ -2084,9 +2385,10 @@ const PanelAdmin = ({ auth, onLogout, db, setDb }) => {
     const fmtC = (f) => f ? new Date(f + "T12:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" }) : "—";
     const nId = `notif_cita_${tipo}_${citaForm.id || citaForm.fecha + citaForm.hora}`;
     const msgs = {
-      confirmada: { titulo: "✅ Cita confirmada", mensaje: `Tu cita del ${fmtC(citaForm.fecha)} a las ${citaForm.hora} — ${citaForm.motivo} — ha sido confirmada. ¡Te esperamos!` },
-      cancelada:  { titulo: "❌ Cita cancelada",  mensaje: `Tu cita del ${fmtC(citaForm.fecha)} a las ${citaForm.hora} — ${citaForm.motivo} — fue cancelada. Por favor reagenda cuando gustes.` },
-      nueva:      { titulo: "📅 Nueva cita agendada", mensaje: `${db.clientes[citaForm.clienteId]?.nombres || "Un cliente"} agendó una cita para el ${fmtC(citaForm.fecha)} a las ${citaForm.hora}: ${citaForm.motivo}.` },
+      confirmada:   { titulo: "✅ Cita confirmada",    mensaje: `Tu cita del ${fmtC(citaForm.fecha)} a las ${citaForm.hora} — ${citaForm.motivo} — ha sido confirmada. ¡Te esperamos!` },
+      cancelada:    { titulo: "❌ Cita cancelada",     mensaje: `Tu cita del ${fmtC(citaForm.fecha)} a las ${citaForm.hora} — ${citaForm.motivo} — fue cancelada. Por favor reagenda cuando gustes.` },
+      nueva:        { titulo: "📅 Nueva cita agendada", mensaje: `${db.clientes[citaForm.clienteId]?.nombres || "Un cliente"} agendó una cita para el ${fmtC(citaForm.fecha)} a las ${citaForm.hora}: ${citaForm.motivo}.` },
+      reprogramada: { titulo: "📅 Cita reprogramada",  mensaje: `La cita fue reprogramada para el ${fmtC(citaForm.fecha)} a las ${citaForm.hora} — ${citaForm.motivo}.` },
     };
     const m = msgs[tipo];
     if (!m) return null;
@@ -2099,12 +2401,26 @@ const PanelAdmin = ({ auth, onLogout, db, setDb }) => {
     const saved = { ...form, id, empresaId: adminData.empresaId, sedeId: form.sedeId || adminData.sedeId || "", adminId: auth.id };
     let notifs = {};
     if (!prevCita && form.clienteId) {
-      // new cita created by admin → notify client
       const n = citaNotif({ ...saved }, "nueva");
       if (n) notifs = { ...notifs, ...n };
-    } else if (prevCita && form.estado !== prevCita.estado && form.clienteId) {
-      if (form.estado === "confirmada") { const n = citaNotif(saved, "confirmada"); if (n) notifs = { ...notifs, ...n }; }
-      if (form.estado === "cancelada")  { const n = citaNotif(saved, "cancelada");  if (n) notifs = { ...notifs, ...n }; }
+    } else if (prevCita && form.clienteId) {
+      const fmtC = (f) => f ? new Date(f + "T12:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" }) : "—";
+      const nc = empresa?.notificaciones || {};
+      const emailCfg = db.ajustes?.email;
+      const cli = db.clientes?.[form.clienteId];
+      const vars = { cliente: `${cli?.nombres || ""} ${cli?.apellidos || ""}`.trim(), fecha: fmtC(form.fecha), hora: form.hora, motivo: form.motivo || "" };
+      const isReschedule = prevCita.fecha !== form.fecha || prevCita.hora !== form.hora;
+      if (isReschedule) {
+        const n = citaNotif(saved, "reprogramada");
+        if (n) notifs = { ...notifs, ...n };
+        if (nc.citas && nc.emailEnabled) {
+          if (cli?.email) sendEmailTpl(emailCfg, cli.email, "citaReprogramada", vars);
+          if (nc.notifEmail) sendEmailTpl(emailCfg, nc.notifEmail, "citaReprogramadaVet", vars);
+        }
+      } else if (form.estado !== prevCita.estado) {
+        if (form.estado === "confirmada") { const n = citaNotif(saved, "confirmada"); if (n) notifs = { ...notifs, ...n }; }
+        if (form.estado === "cancelada")  { const n = citaNotif(saved, "cancelada");  if (n) notifs = { ...notifs, ...n }; }
+      }
     }
     setDb(prev => ({ ...prev, citas: { ...(prev.citas || {}), [id]: saved }, notificaciones: { ...(prev.notificaciones || {}), ...notifs } }));
     setModalCita(null);
@@ -2115,17 +2431,25 @@ const PanelAdmin = ({ auth, onLogout, db, setDb }) => {
     if (!cita || cita.estado === newEstado) return;
     const saved = { ...cita, estado: newEstado };
     let notifs = {};
-    const nc = empresa?.notificaciones || {};
+    const nc           = empresa?.notificaciones || {};
+    const emailCfg     = db.ajustes?.email;
+    const clienteEmail = db.clientes?.[cita.clienteId]?.email;
+    const notifEmail   = nc.notifEmail;
     if (cita.clienteId) {
       if (newEstado === "confirmada") {
         const n = citaNotif(saved, "confirmada");
         if (n) notifs = { ...notifs, ...n };
-        if (nc.citas) sendPush("✅ Cita confirmada", `La cita del ${cita.fecha} a las ${cita.hora} — ${cita.motivo} — ha sido confirmada.`, `cita_conf_${id}`);
+        const vars = { cliente: `${db.clientes?.[cita.clienteId]?.nombres || ""} ${db.clientes?.[cita.clienteId]?.apellidos || ""}`.trim(), fecha: cita.fecha, hora: cita.hora, motivo: cita.motivo || "" };
+        if (nc.citas && nc.emailEnabled && clienteEmail) sendEmailTpl(emailCfg, clienteEmail, "citaConfirmada", vars);
       }
       if (newEstado === "cancelada") {
         const n = citaNotif(saved, "cancelada");
         if (n) notifs = { ...notifs, ...n };
-        if (nc.citas) sendPush("❌ Cita cancelada", `La cita del ${cita.fecha} a las ${cita.hora} — ${cita.motivo} — fue cancelada.`, `cita_cancel_${id}`);
+        const vars = { cliente: `${db.clientes?.[cita.clienteId]?.nombres || ""} ${db.clientes?.[cita.clienteId]?.apellidos || ""}`.trim(), fecha: cita.fecha, hora: cita.hora, motivo: cita.motivo || "" };
+        // Al cliente
+        if (nc.citas && nc.emailEnabled && clienteEmail) sendEmailTpl(emailCfg, clienteEmail, "citaCancelada", vars);
+        // A la veterinaria
+        if (nc.citas && nc.emailEnabled && notifEmail) sendEmailTpl(emailCfg, notifEmail, "citaCanceladaVet", vars);
       }
     }
     setDb(prev => ({ ...prev, citas: { ...prev.citas, [id]: saved }, notificaciones: { ...(prev.notificaciones || {}), ...notifs } }));
@@ -3043,7 +3367,7 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
 
   const cliente = db.clientes[auth.id] || {};
   const empresa = db.empresas[cliente.empresaId] || null;
-  usePushEngine(db, empresa);
+  usePushEngine(db, empresa, auth.id);
   const misMascotas = Object.values(db.mascotas || {}).filter(m => m.clienteId === auth.id);
   const misCitas = Object.values(db.citas || {}).filter(c => c.clienteId === auth.id).sort((a, b) => b.fecha.localeCompare(a.fecha) || b.hora.localeCompare(a.hora));
   const misHistorial = Object.values(db.historialMedico || {}).filter(h => h.clienteId === auth.id).sort((a, b) => b.fecha.localeCompare(a.fecha));
@@ -3071,11 +3395,29 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
     const isNew = !form.id;
     const fmtC = (f) => f ? new Date(f + "T12:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" }) : "—";
     const notifs = {};
+    const nc = empresa?.notificaciones || {};
+    const emailCfg = db.ajustes?.email;
     if (isNew) {
       const nId = `notif_cita_new_${Date.now()}`;
       notifs[nId] = { id: nId, leida: false, fecha: hoy, tipo: "citas", empresaId: cliente.empresaId, clienteId: null,
         titulo: "📅 Nueva cita solicitada",
         mensaje: `${cliente.nombres} ${cliente.apellidos} agendó una cita para el ${fmtC(form.fecha)} a las ${form.hora}: ${form.motivo}.` };
+      if (nc.emailEnabled && nc.citas && nc.notifEmail) {
+        sendEmailTpl(emailCfg, nc.notifEmail, "citaNueva", { cliente: `${cliente.nombres} ${cliente.apellidos}`, fecha: fmtC(form.fecha), hora: form.hora, motivo: form.motivo });
+      }
+    } else {
+      const prevCita = db.citas?.[form.id];
+      if (prevCita && (prevCita.fecha !== form.fecha || prevCita.hora !== form.hora)) {
+        const nId = `notif_cita_reprog_${Date.now()}`;
+        notifs[nId] = { id: nId, leida: false, fecha: hoy, tipo: "citas", empresaId: cliente.empresaId, clienteId: null,
+          titulo: "📅 Cita reprogramada",
+          mensaje: `${cliente.nombres} ${cliente.apellidos} reprogramó su cita para el ${fmtC(form.fecha)} a las ${form.hora}: ${form.motivo}.` };
+        if (nc.emailEnabled && nc.citas) {
+          const vars = { cliente: `${cliente.nombres} ${cliente.apellidos}`, fecha: fmtC(form.fecha), hora: form.hora, motivo: form.motivo };
+          if (nc.notifEmail) sendEmailTpl(emailCfg, nc.notifEmail, "citaReprogramadaVet", vars);
+          if (cliente.email) sendEmailTpl(emailCfg, cliente.email, "citaReprogramada", vars);
+        }
+      }
     }
     setDb(prev => ({
       ...prev,
@@ -3094,6 +3436,13 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
     const notif = { [nId]: { id: nId, leida: false, fecha: hoy, tipo: "citas", empresaId: cliente.empresaId, clienteId: null,
       titulo: "❌ Cita cancelada por cliente",
       mensaje: `${cliente.nombres} ${cliente.apellidos} canceló su cita del ${fmtC(cita?.fecha)} a las ${cita?.hora || ""}${cita?.motivo ? ` (${cita.motivo})` : ""}.` } };
+    const nc = empresa?.notificaciones || {};
+    if (nc.emailEnabled && nc.citas) {
+      const emailCfg = db.ajustes?.email;
+      const vars = { cliente: `${cliente.nombres} ${cliente.apellidos}`, fecha: fmtC(cita?.fecha), hora: cita?.hora || "", motivo: cita?.motivo || "" };
+      if (nc.notifEmail) sendEmailTpl(emailCfg, nc.notifEmail, "citaCanceladaVet", vars);
+      if (cliente.email) sendEmailTpl(emailCfg, cliente.email, "citaCancelada", vars);
+    }
     setDb(prev => ({ ...prev,
       citas: { ...prev.citas, [id]: { ...prev.citas[id], estado: "cancelada" } },
       notificaciones: { ...(prev.notificaciones || {}), ...notif },
@@ -3129,7 +3478,9 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
         const titulo = `💊 ¿Diste el medicamento?`;
         const mensaje = `${ev.nombre}${ev.dosis ? ` (${ev.dosis})` : ""} programado a las ${ev.hora} para ${ev.mascotaNombre || "tu mascota"} — no fue marcado como administrado.`;
         notifsPorGenerar[notifKey] = { id: notifKey, leida: false, fecha, tipo: "recordatorio_med", empresaId: cliente.empresaId, clienteId: auth.id, titulo, mensaje };
-        if ((empresa?.notificaciones || {}).recordatorioMed) sendPush(titulo, mensaje, `med_rem_${k}`);
+        const nc = empresa?.notificaciones || {};
+        if (nc.recordatorioMed) sendPush(titulo, mensaje, `med_rem_${k}`);
+        if (nc.recordatorioMed && nc.emailEnabled && cliente.email) sendEmailTpl(db.ajustes?.email, cliente.email, "recordatorioMed", { medicamento: ev.nombre, dosis: ev.dosis ? ` (${ev.dosis})` : "", hora: ev.hora, mascota: ev.mascotaNombre || "tu mascota" });
       });
     });
     if (Object.keys(notifsPorGenerar).length > 0) {
