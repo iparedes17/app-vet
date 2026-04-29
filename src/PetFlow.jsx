@@ -431,6 +431,34 @@ const ModalUsuarioAdmin = ({ usuario, empresas, sedes, onSave, onClose }) => {
   );
 };
 
+const ModalSuperAdminUser = ({ sa, onSave, onClose }) => {
+  const [form, setForm] = useState(sa || { nombre: "", email: "", password: "" });
+  const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const handleSave = () => {
+    if (!form.nombre || !form.email || (!sa && !form.password)) { alert("Nombre, email y contraseña son obligatorios"); return; }
+    onSave(form);
+  };
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="card modal-inner" style={{ width: "100%", maxWidth: 480, padding: 32 }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <h2 style={{ fontSize: 24, fontWeight: 800, color: T.tx1 }}>{sa ? "Editar Super Admin" : "Nuevo Super Admin"}</h2>
+          <button className="btn" onClick={onClose}>✕</button>
+        </div>
+        <div style={{ display: "grid", gap: 20, marginBottom: 24 }}>
+          <div><label style={LBL}>NOMBRE *</label><input className="input" value={form.nombre} onChange={e => f("nombre", e.target.value)} placeholder="Nombre completo" /></div>
+          <div><label style={LBL}>EMAIL *</label><input className="input" type="email" value={form.email} onChange={e => f("email", e.target.value)} placeholder="superadmin@petflow.io" /></div>
+          <div><label style={LBL}>{sa ? "NUEVA CONTRASEÑA" : "CONTRASEÑA *"}</label><input className="input" type="password" value={form.password} onChange={e => f("password", e.target.value)} placeholder="••••••••" />{!sa && <PasswordHint />}</div>
+        </div>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button className="btn-primary" style={{ flex: 1 }} onClick={handleSave}>{sa ? "Guardar Cambios" : "Crear Super Admin"}</button>
+          <button className="btn" onClick={onClose}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ModalCliente = ({ cliente, empresas, sedes, onSave, onClose, defaultValues = {} }) => {
   const [form, setForm] = useState(cliente || { nombres: "", apellidos: "", celular: "", email: "", empresaId: defaultValues.empresaId || "", sedeId: defaultValues.sedeId || "", password: "" });
   const sedesFiltradas = Object.values(sedes).filter(s => s.empresaId === form.empresaId);
@@ -657,7 +685,7 @@ const ESTADO_CITA = [
   { v: "cancelada",  l: "Cancelada",  c: "#f43f5e"  },
 ];
 
-const CalendarioNeuro = ({ value, onChange, citasPorFecha = {} }) => {
+const CalendarioNeuro = ({ value, onChange, citasPorFecha = {}, blockPast = false }) => {
   const hoy = new Date();
   const [vista, setVista] = useState(() => {
     const d = value ? new Date(value + "T12:00:00") : new Date();
@@ -678,6 +706,8 @@ const CalendarioNeuro = ({ value, onChange, citasPorFecha = {} }) => {
     return d === s.getDate() && vista.m === s.getMonth() && vista.y === s.getFullYear();
   };
   const fmtKey = (d) => `${vista.y}-${String(vista.m + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+  const hoyKey = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,"0")}-${String(hoy.getDate()).padStart(2,"0")}`;
+  const esPasado = (d) => blockPast && fmtKey(d) < hoyKey;
   const prev = () => setVista(v => { const d = new Date(v.y, v.m - 1, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
   const next = () => setVista(v => { const d = new Date(v.y, v.m + 1, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
   return (
@@ -695,33 +725,38 @@ const CalendarioNeuro = ({ value, onChange, citasPorFecha = {} }) => {
           if (d === null) return <div key={`v${i}`} />;
           const sel = esSel(d);
           const tod = esHoy(d);
+          const pas = esPasado(d);
           const key = fmtKey(d);
           const nC = citasPorFecha[key]?.length || 0;
           return (
             <button
               type="button"
               key={d}
-              onClick={() => onChange(key)}
+              onClick={() => !pas && onChange(key)}
+              disabled={pas}
               style={{
                 aspectRatio: "1",
                 borderRadius: 10,
                 border: "1px solid rgba(255,255,255,0.6)",
-                cursor: "pointer",
+                cursor: pas ? "not-allowed" : "pointer",
                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
                 fontSize: 12, fontWeight: sel || tod ? 800 : 600,
-                color: sel ? "white" : tod ? T.primary : T.tx1,
+                color: sel ? "white" : tod ? T.primary : pas ? T.tx3 : T.tx1,
                 background: sel ? `linear-gradient(135deg, ${T.primary}, ${T.primaryLight})` : T.surface,
                 boxShadow: sel
                   ? `inset 4px 4px 10px rgba(20,65,85,0.45), inset -4px -4px 10px rgba(255,255,255,0.12)`
                   : tod
                   ? `5px 5px 12px #c5cdd8, -5px -5px 12px #ffffff, 0 0 0 2px ${T.primary}`
+                  : pas
+                  ? "none"
                   : `4px 4px 10px #c5cdd8, -4px -4px 10px #ffffff`,
                 transition: "all 0.18s ease",
                 padding: "4px 2px",
+                opacity: pas ? 0.33 : 1,
               }}
             >
               {d}
-              {nC > 0 && <div style={{ width: 5, height: 5, borderRadius: "50%", background: sel ? "rgba(255,255,255,0.85)" : T.primary, flexShrink: 0 }} />}
+              {nC > 0 && !pas && <div style={{ width: 5, height: 5, borderRadius: "50%", background: sel ? "rgba(255,255,255,0.85)" : T.primary, flexShrink: 0 }} />}
             </button>
           );
         })}
@@ -814,11 +849,17 @@ const ModalNuevaCita = ({ cita, clientes, mascotas, sedes, citasExistentes, isAd
         .filter(c => c.fecha === form.fecha && c.estado !== "cancelada" && c.id !== cita?.id && (!form.sedeId || !c.sedeId || c.sedeId === form.sedeId))
         .map(c => c.hora)
     : [];
-  const slotOcupado = ocupados.includes(form.hora);
+  const _now = new Date();
+  const _todayStr = _now.toISOString().slice(0, 10);
+  const _nowHHMM = `${String(_now.getHours()).padStart(2,"0")}:${String(_now.getMinutes()).padStart(2,"0")}`;
+  const slotsPasados = form.fecha === _todayStr ? HORARIO_SLOTS.filter(s => s < _nowHHMM) : [];
+  const ocupadosConPasados = [...new Set([...ocupados, ...slotsPasados])];
+  const slotOcupado = ocupadosConPasados.includes(form.hora);
   const handleSave = () => {
     if (!form.fecha || !form.motivo) { alert("Fecha y motivo son obligatorios"); return; }
     if (isAdmin && !form.clienteId) { alert("Selecciona un cliente"); return; }
-    if (slotOcupado) { alert(`La hora ${form.hora} ya está ocupada el ${form.fecha}. Elige otro horario.`); return; }
+    if (form.fecha < _todayStr) { alert("No puedes agendar citas en fechas pasadas."); return; }
+    if (slotOcupado) { alert(`La hora ${form.hora} ya está ocupada o ha pasado. Elige otro horario.`); return; }
     onSave(form);
   };
   return (
@@ -830,16 +871,16 @@ const ModalNuevaCita = ({ cita, clientes, mascotas, sedes, citasExistentes, isAd
         </div>
         <div style={{ marginBottom: 22 }}>
           <label style={LBL}>FECHA *</label>
-          <CalendarioNeuro value={form.fecha} onChange={v => f("fecha", v)} />
+          <CalendarioNeuro value={form.fecha} onChange={v => f("fecha", v)} blockPast={true} />
           {form.fecha && <p style={{ fontSize: 12, color: T.primary, fontWeight: 700, marginTop: 10, paddingLeft: 2, display: "flex", alignItems: "center", gap: 5 }}><span style={{ display: "inline-flex" }}>{Icons.citas}</span>{fmtFecha(form.fecha)}</p>}
         </div>
         <div style={{ marginBottom: 22 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <label style={LBL}>HORA {form.fecha ? `· ${ocupados.length > 0 ? `${ocupados.length} ocupada${ocupados.length > 1 ? "s" : ""}` : "todos libres"}` : ""}</label>
+            <label style={LBL}>HORA {form.fecha ? `· ${ocupados.length > 0 ? `${ocupados.length} ocupada${ocupados.length > 1 ? "s" : ""}` : "todos libres"}` : ""}{slotsPasados.length > 0 ? ` · ${slotsPasados.length} pasada${slotsPasados.length > 1 ? "s" : ""}` : ""}</label>
             {slotOcupado && <span style={{ fontSize: 11, fontWeight: 800, color: "#f43f5e", background: "#f43f5e18", padding: "3px 10px", borderRadius: 8 }}>⚠ Hora ocupada</span>}
           </div>
           {form.fecha ? (
-            <SlotGrid value={form.hora} onChange={v => f("hora", v)} ocupados={ocupados} />
+            <SlotGrid value={form.hora} onChange={v => f("hora", v)} ocupados={ocupadosConPasados} />
           ) : (
             <div className="inset" style={{ padding: "16px", borderRadius: 16, textAlign: "center" }}>
               <p style={{ fontSize: 13, color: T.tx3 }}>Selecciona una fecha primero para ver disponibilidad</p>
@@ -932,14 +973,15 @@ const Icons = {
 };
 
 const MENU = [
-  { id: "inicio",    label: "Inicio",         iconKey: "inicio"    },
-  { id: "empresas",  label: "Empresas",        iconKey: "empresas"  },
-  { id: "sedes",     label: "Sedes",           iconKey: "sedes"     },
-  { id: "admins",    label: "Usuarios Admin",  iconKey: "admins"    },
-  { id: "clientes",  label: "Clientes",        iconKey: "clientes"  },
-  { id: "mascotas",  label: "Mascotas",        iconKey: "mascotas"  },
-  { id: "reportes",  label: "Reportes",        iconKey: "reportes"  },
-  { id: "ajustes",   label: "Ajustes",         iconKey: "ajustes"   },
+  { id: "inicio",       label: "Inicio",         iconKey: "inicio"    },
+  { id: "empresas",     label: "Empresas",        iconKey: "empresas"  },
+  { id: "sedes",        label: "Sedes",           iconKey: "sedes"     },
+  { id: "admins",       label: "Usuarios Admin",  iconKey: "admins"    },
+  { id: "clientes",     label: "Clientes",        iconKey: "clientes"  },
+  { id: "mascotas",     label: "Mascotas",        iconKey: "mascotas"  },
+  { id: "reportes",     label: "Reportes",        iconKey: "reportes"  },
+  { id: "superadmins",  label: "Super Admins",    iconKey: "admins"    },
+  { id: "ajustes",      label: "Ajustes",         iconKey: "ajustes"   },
 ];
 
 const MetricCard = ({ icon, value, label, color, sub }) => (
@@ -966,7 +1008,7 @@ const TabInicio = ({ db, perfil }) => {
     <div>
       {/* Bienvenida */}
       <div className="card" style={{ padding: "22px 28px", marginBottom: 28, display: "flex", alignItems: "center", gap: 18 }}>
-        <div className="inset" style={{ width: 52, height: 52, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><LogoImg size={46} /></div>
+        <div className="inset" style={{ width: 52, height: 52, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><LogoImg size={75} /></div>
         <div>
           <h2 style={{ fontSize: 20, fontWeight: 800, color: T.tx1 }}>Bienvenido, {perfil.nombre} {perfil.apellido}</h2>
           <p style={{ fontSize: 13, color: T.tx3, marginTop: 3 }}>
@@ -1677,11 +1719,26 @@ const PanelSuperAdmin = ({ onLogout, db, setDb }) => {
   const [modalCliente, setModalCliente] = useState(null);
   const [modalMascota, setModalMascota] = useState(null);
   const [modalResetClave, setModalResetClave] = useState(null);
-  const [search, setSearch] = useState({ empresas: "", sedes: "", admins: "", clientes: "" });
-  const [showSearch, setShowSearch] = useState({ empresas: false, sedes: false, admins: false, clientes: false });
+  const [modalSuperAdmin, setModalSuperAdmin] = useState(null);
+  const [search, setSearch] = useState({ empresas: "", sedes: "", admins: "", clientes: "", superadmins: "" });
+  const [showSearch, setShowSearch] = useState({ empresas: false, sedes: false, admins: false, clientes: false, superadmins: false });
   const toggleSearch = (key) => setShowSearch(p => ({ ...p, [key]: !p[key] }));
   const setQ = (key, val) => setSearch(p => ({ ...p, [key]: val }));
 
+  const saveSuperAdmin = (form) => {
+    const id = form.id || `sa_${Date.now()}`;
+    setDb(prev => ({ ...prev, users: { ...prev.users, [id]: { ...form, id, role: "superadmin" } } }));
+    setModalSuperAdmin(null);
+    alert("✓ Super Admin guardado");
+  };
+  const deleteSuperAdmin = (id) => {
+    if (Object.keys(db.users || {}).filter(k => db.users[k].role === "superadmin").length <= 1) { alert("Debe existir al menos un Super Admin."); return; }
+    if (confirm("¿Eliminar este Super Admin?")) {
+      const { [id]: _, ...rest } = db.users;
+      setDb(prev => ({ ...prev, users: rest }));
+      alert("✓ Super Admin eliminado");
+    }
+  };
   const saveEmpresa = (form) => { const id = form.id || `emp_${Date.now()}`; setDb(prev => ({ ...prev, empresas: { ...prev.empresas, [id]: { ...form, id } } })); setModalEmpresa(null); alert("✓ Empresa guardada"); };
   const deleteEmpresa = (id) => { if (confirm("¿Eliminar esta empresa?")) { const { [id]: _, ...rest } = db.empresas; setDb(prev => ({ ...prev, empresas: rest })); alert("✓ Empresa eliminada"); } };
   const saveSede = (form) => { const id = form.id || `sede_${Date.now()}`; setDb(prev => ({ ...prev, sedes: { ...prev.sedes, [id]: { ...form, id } } })); setModalSede(null); alert("✓ Sede guardada"); };
@@ -1757,10 +1814,10 @@ const PanelSuperAdmin = ({ onLogout, db, setDb }) => {
         transform: isMobile ? (mobileOpen ? "translateX(0)" : "translateX(-100%)") : "none",
         transition: "width 0.3s ease, padding 0.3s ease, transform 0.3s ease",
       }}>
-        {/* Logo */}
+        {/* f */}
         <div style={{ marginBottom: 16, display: "flex", alignItems: "center", justifyContent: (!isMobile && collapsed) ? "center" : "flex-start", gap: 14, overflow: "hidden" }}>
           <div style={{ width: 54, height: 54, borderRadius: 18, flexShrink: 0, background: T.surface, boxShadow: "9px 9px 20px #c5cdd8, -9px -9px 20px #ffffff", border: "1px solid rgba(255,255,255,0.8)", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.3s ease" }}>
-            <LogoImg size={48} />
+            <LogoImg size={70} />
           </div>
           {(isMobile || !collapsed) && (
             <div style={{ whiteSpace: "nowrap" }}>
@@ -1831,7 +1888,7 @@ const PanelSuperAdmin = ({ onLogout, db, setDb }) => {
 
           {/* Botones topbar derecha */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <CampanaNotificaciones notificaciones={db.notificaciones || {}} onMarcarLeida={marcarLeidaSA} onMarcarTodas={marcarTodasSA} />
+          <CampanaNotificaciones notificaciones={Object.fromEntries(Object.entries(db.notificaciones || {}).filter(([,n]) => !n.clienteId && !n.empresaId))} onMarcarLeida={marcarLeidaSA} onMarcarTodas={marcarTodasSA} />
           <div style={{ position: "relative" }}>
             <button
               className="btn"
@@ -2054,6 +2111,45 @@ const PanelSuperAdmin = ({ onLogout, db, setDb }) => {
         );
       })()}
 
+      {tab === "superadmins" && (() => {
+        const q = search.superadmins.toLowerCase();
+        const saList = Object.values(db.users || {}).filter(u => u.role === "superadmin" && (!q || u.nombre?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)));
+        return (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: showSearch.superadmins ? 12 : 24 }}>
+              <h2 style={{ fontSize: 24, fontWeight: 700, color: T.tx1 }}>Super Admins ({saList.length})</h2>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn" style={{ padding: "10px 14px" }} title="Buscar" onClick={() => toggleSearch("superadmins")}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </button>
+                <button className="btn-primary" onClick={() => setModalSuperAdmin({})}>Nuevo Super Admin</button>
+              </div>
+            </div>
+            {showSearch.superadmins && <div style={{ marginBottom: 20 }}><input className="input" value={search.superadmins} onChange={e => setQ("superadmins", e.target.value)} placeholder="Buscar por nombre o email..." autoFocus /></div>}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {saList.map(sa => (
+                <div key={sa.id} className="inset list-row" style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    <div className="inset" style={{ width: 40, height: 40, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", color: T.primary, flexShrink: 0 }}>
+                      {Icons.admins}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: T.tx1 }}>{sa.nombre || "—"}</div>
+                      <div style={{ fontSize: 12, color: T.tx3, marginTop: 2 }}>{sa.email}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button className="btn" onClick={() => setModalSuperAdmin(sa)}>Editar</button>
+                    <button className="btn-danger" onClick={() => deleteSuperAdmin(sa.id)}>Eliminar</button>
+                  </div>
+                </div>
+              ))}
+              {saList.length === 0 && <div className="card" style={{ padding: 40, textAlign: "center", color: T.tx3 }}>No hay resultados.</div>}
+            </div>
+          </div>
+        );
+      })()}
+
       {tab === "clientes" && (() => {
         const q = search.clientes.toLowerCase();
         const clientesAll = Object.values(db.clientes).filter(c => !q || `${c.nombres} ${c.apellidos}`.toLowerCase().includes(q) || c.email.toLowerCase().includes(q) || (c.celular || "").includes(q));
@@ -2142,6 +2238,9 @@ const PanelSuperAdmin = ({ onLogout, db, setDb }) => {
       {modalResetClave && <ModalRestablecerClave userName={modalResetClave.nombre} onSave={resetClaveSA} onClose={() => setModalResetClave(null)} />}
       {modalPerfil && <ModalEditarPerfil perfil={perfil} onSave={data => { setPerfil(data); setModalPerfil(false); alert("✓ Perfil actualizado"); }} onClose={() => setModalPerfil(false)} />}
       {modalClave && <ModalCambiarClave onClose={() => setModalClave(false)} />}
+      {modalSuperAdmin !== null && (
+        <ModalSuperAdminUser sa={modalSuperAdmin.id ? modalSuperAdmin : null} onSave={saveSuperAdmin} onClose={() => setModalSuperAdmin(null)} />
+      )}
       </div>
     </div>
   );
@@ -2154,9 +2253,8 @@ const Login = ({ onLogin, db }) => {
 
   const handleLogin = () => {
     const em = email.trim().toLowerCase();
-    if (em === "superadmin@petflow.io" && password === "super123") {
-      onLogin({ role: "superadmin", email: em }); return;
-    }
+    const superAdm = Object.values(db.users || {}).find(u => u.role === "superadmin" && u.email?.toLowerCase() === em && u.password === password);
+    if (superAdm) { onLogin({ role: "superadmin", email: em, id: superAdm.id, nombre: superAdm.nombre }); return; }
     const admin = Object.values(db.adminUsers).find(u => u.email.toLowerCase() === em && u.password === password);
     if (admin) { onLogin({ role: "admin", email: em, id: admin.id, nombre: admin.nombre }); return; }
     const cli = Object.values(db.clientes).find(u => u.email.toLowerCase() === em && u.password === password);
@@ -2164,119 +2262,50 @@ const Login = ({ onLogin, db }) => {
     setError("Credenciales incorrectas");
   };
 
-  const inpStyle = {
-    width: "100%", height: 50, borderRadius: 50,
-    background: "rgba(255,255,255,0.72)",
-    boxShadow: "inset 3px 3px 8px rgba(163,177,198,0.5), inset -3px -3px 8px rgba(255,255,255,0.9)",
-    border: "1px solid rgba(255,255,255,0.85)",
-    padding: "0 22px", fontSize: 14, color: T.tx1,
-    outline: "none", fontFamily: "Inter, sans-serif", fontWeight: 500,
-    backdropFilter: "blur(4px)",
-  };
-
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: T.bg }}>
       <style>{CSS}</style>
+      <div className="card login-card" style={{ width: "100%", maxWidth: 460, padding: "48px 44px" }}>
 
-      {/* ── Tarjeta principal ── */}
-      <div style={{
-        width: "100%", maxWidth: 380,
-        background: T.surface,
-        borderRadius: 32,
-        boxShadow: "0 24px 64px rgba(0,0,0,0.13), 0 4px 16px rgba(0,0,0,0.07)",
-        border: "1px solid rgba(255,255,255,0.92)",
-        overflow: "hidden",
-        position: "relative",
-      }}>
-
-        {/* ── Zona orgánica blanca superior con SVG ── */}
-        <div style={{ position: "relative", height: 272 }}>
-          {/* Blob SVG */}
-          <svg viewBox="0 0 380 272" preserveAspectRatio="none"
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block" }}>
-            <defs>
-              <filter id="blobShadow" x="-10%" y="-10%" width="120%" height="130%">
-                <feDropShadow dx="0" dy="6" stdDeviation="10" floodColor="rgba(0,0,0,0.07)" />
-              </filter>
-            </defs>
-            {/* Forma orgánica blanca */}
-            <path
-              d="M0,32 C0,14 14,0 32,0 L348,0 C366,0 380,14 380,32
-                 L380,210
-                 C355,230 330,200 300,218
-                 C270,236 248,208 218,228
-                 C188,248 162,215 132,230
-                 C102,245  72,212  42,226
-                 C22,235   8,226   0,220
-                 Z"
-              fill="white"
-              filter="url(#blobShadow)"
-            />
-          </svg>
-
-          {/* Logo + nombre sobre el blob */}
-          <div style={{ position: "relative", zIndex: 1, paddingTop: 40, textAlign: "center" }}>
-            <div style={{
-              width: 116, height: 116, borderRadius: 30,
-              background: T.surface,
-              boxShadow: "14px 14px 30px #c0cad4, -14px -14px 30px #ffffff",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              margin: "0 auto 16px",
-            }}>
-              <LogoImg size={100} />
+        {/* Logo + título */}
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <div style={{ marginBottom: 24, display: "flex", justifyContent: "center" }}>
+            <div style={{ width: 124, height: 124, borderRadius: 36, background: T.surface, boxShadow: "20px 20px 44px #b8c4d0, -20px -20px 44px #ffffff, inset 0 0 0 1px rgba(255,255,255,0.9)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <LogoImg size={160} />
             </div>
-            <h1 style={{ fontSize: 29, fontWeight: 800, color: "#4a5568", letterSpacing: -0.3 }}>PetFlow</h1>
           </div>
+          <h1 style={{ fontSize: 32, fontWeight: 800, color: T.tx1 }}>PetFlow</h1>
         </div>
 
-        {/* ── Formulario ── */}
-        <div style={{ padding: "10px 32px 36px" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-            <div>
-              <label style={{ fontSize: 10.5, fontWeight: 700, color: T.tx3, letterSpacing: 1.5, display: "block", marginBottom: 7 }}>EMAIL</label>
-              <input style={inpStyle} type="email" value={email}
-                onChange={e => { setEmail(e.target.value); setError(""); }}
-                placeholder="correo@ejemplo.com" />
-            </div>
-
-            <div>
-              <label style={{ fontSize: 10.5, fontWeight: 700, color: T.tx3, letterSpacing: 1.5, display: "block", marginBottom: 7 }}>CONTRASEÑA</label>
-              <input style={inpStyle} type="password" value={password}
-                onChange={e => { setPassword(e.target.value); setError(""); }}
-                onKeyDown={e => e.key === "Enter" && handleLogin()}
-                placeholder="••••••••" />
-              <PasswordHint />
-            </div>
-
-            {error && (
-              <div style={{ background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.3)", borderRadius: 14, padding: 14, color: T.rose, fontSize: 14, fontWeight: 600 }}>
-                ⚠ {error}
-              </div>
-            )}
-
-            {/* Botón gloss */}
-            <button onClick={handleLogin} style={{
-              width: "100%", height: 52, borderRadius: 50,
-              background: `linear-gradient(135deg, ${T.primary} 0%, ${T.primaryLight} 100%)`,
-              color: "white", border: "none",
-              fontSize: 16, fontWeight: 700, letterSpacing: 0.5,
-              cursor: "pointer", fontFamily: "Inter, sans-serif",
-              boxShadow: `0 10px 30px rgba(63,143,176,0.5), 0 2px 8px rgba(63,143,176,0.3)`,
-              position: "relative", overflow: "hidden",
-              transition: "transform 0.18s, box-shadow 0.18s",
-            }}>
-              {/* brillo superior */}
-              <div style={{
-                position: "absolute", inset: "0 0 50% 0",
-                background: "linear-gradient(180deg, rgba(255,255,255,0.28) 0%, transparent 100%)",
-                borderRadius: "50px 50px 0 0", pointerEvents: "none",
-              }} />
-              Entrar
-            </button>
+        {/* Formulario */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div>
+            <label style={{ fontSize: 13, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 8 }}>EMAIL</label>
+            <input className="input" type="email" value={email}
+              onChange={e => { setEmail(e.target.value); setError(""); }}
+              placeholder="superadmin@petflow.io" />
           </div>
+          <div>
+            <label style={{ fontSize: 13, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 8 }}>CONTRASEÑA</label>
+            <input className="input" type="password" value={password}
+              onChange={e => { setPassword(e.target.value); setError(""); }}
+              onKeyDown={e => e.key === "Enter" && handleLogin()}
+              placeholder="••••••••" />
+            <PasswordHint />
+          </div>
+          {error && (
+            <div style={{ background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.3)", borderRadius: 14, padding: 14, color: T.rose, fontSize: 14, fontWeight: 600 }}>
+              ⚠ {error}
+            </div>
+          )}
+          <button className="btn-primary" style={{ width: "100%", height: 52, fontSize: 15 }} onClick={handleLogin}>
+            Entrar
+          </button>
+        </div>
 
-          <p style={{ marginTop: 22, textAlign: "center", fontSize: 12, color: T.tx3, fontStyle: "italic", lineHeight: 1.7 }}>
+        {/* Slogan */}
+        <div style={{ marginTop: 28, textAlign: "center" }}>
+          <p style={{ fontSize: 13, color: T.tx3, fontStyle: "italic", lineHeight: 1.6 }}>
             "Cuidar a un animal es cuidar un pedazo de vida que confía en ti sin condiciones."
           </p>
         </div>
@@ -2530,7 +2559,7 @@ const PanelAdmin = ({ auth, onLogout, db, setDb }) => {
       <div style={sidebarStyle}>
         <div style={{ marginBottom: 16, display: "flex", alignItems: "center", justifyContent: (!isMobile && collapsed) ? "center" : "flex-start", gap: 14, overflow: "hidden" }}>
           <div style={{ width: 54, height: 54, borderRadius: 18, flexShrink: 0, background: T.surface, boxShadow: "9px 9px 20px #c5cdd8, -9px -9px 20px #ffffff", border: "1px solid rgba(255,255,255,0.8)", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.3s ease" }}>
-            <LogoImg size={48} />
+            <LogoImg size={50} />
           </div>
           {(isMobile || !collapsed) && (
             <div style={{ whiteSpace: "nowrap" }}>
@@ -3546,7 +3575,7 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
       <div style={sidebarStyle}>
         <div style={{ marginBottom: 16, display: "flex", alignItems: "center", justifyContent: (!isMobile && collapsed) ? "center" : "flex-start", gap: 14, overflow: "hidden" }}>
           <div style={{ width: 54, height: 54, borderRadius: 18, flexShrink: 0, background: T.surface, boxShadow: "9px 9px 20px #c5cdd8, -9px -9px 20px #ffffff", border: "1px solid rgba(255,255,255,0.8)", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.3s ease" }}>
-            <LogoImg size={48} />
+            <LogoImg size={50} />
           </div>
           {(isMobile || !collapsed) && (
             <div style={{ whiteSpace: "nowrap" }}>
@@ -3627,7 +3656,7 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
           <div>
             <div className="card" style={{ padding: "22px 28px", marginBottom: 28, display: "flex", alignItems: "center", gap: 18 }}>
               <div className="inset" style={{ width: 52, height: 52, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <LogoImg size={46} />
+                <LogoImg size={48} />
               </div>
               <div style={{ flex: 1 }}>
                 <h2 style={{ fontSize: 20, fontWeight: 800, color: T.tx1 }}>Bienvenido, {cliente.nombres}</h2>
@@ -4055,10 +4084,11 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: 14, fontWeight: 700, color: T.tx1 }}>{c.motivo}</div>
                                 <div style={{ fontSize: 12, color: T.tx3, marginTop: 3 }}>
-                                  {fmtFecha(c.fecha)} · {c.hora}{masc ? ` · ${masc.nombre}` : ""}
+                                  {fmtFecha(c.fecha)} · {c.hora}
                                 </div>
                                 {c.notas && <div style={{ fontSize: 11, color: T.tx3, marginTop: 2, fontStyle: "italic" }}>{c.notas}</div>}
                               </div>
+                              {masc && <span style={{ fontSize: 11, fontWeight: 800, color: T.primary, background: T.primary + "1a", padding: "4px 10px", borderRadius: 10, flexShrink: 0 }}>{masc.nombre}</span>}
                               <span style={{ fontSize: 11, fontWeight: 800, color: est.c, background: est.c + "22", padding: "4px 12px", borderRadius: 10, flexShrink: 0 }}>{est.l}</span>
                             </div>
                             {activa && (
@@ -4085,8 +4115,9 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
                               <div style={{ width: 8, height: 8, borderRadius: "50%", background: est.c, flexShrink: 0 }} />
                               <div style={{ flex: 1 }}>
                                 <div style={{ fontSize: 13, fontWeight: 600, color: T.tx1 }}>{c.motivo}</div>
-                                <div style={{ fontSize: 11.5, color: T.tx3, marginTop: 2 }}>{fmtFecha(c.fecha)} · {c.hora}{masc ? ` · ${masc.nombre}` : ""}</div>
+                                <div style={{ fontSize: 11.5, color: T.tx3, marginTop: 2 }}>{fmtFecha(c.fecha)} · {c.hora}</div>
                               </div>
+                              {masc && <span style={{ fontSize: 10, fontWeight: 800, color: T.primary, background: T.primary + "1a", padding: "3px 8px", borderRadius: 8, flexShrink: 0 }}>{masc.nombre}</span>}
                               <span style={{ fontSize: 11, fontWeight: 700, color: est.c }}>{est.l}</span>
                             </div>
                           );
