@@ -86,11 +86,6 @@ const NOTIF_TYPES = [
   { key: "diasEspeciales",  iconKey: "globe",   label: "Día Mundial Animales (4 Oct)",   desc: "Notificación al cliente" },
 ];
 
-const COL_TZ  = "America/Bogota";
-const colDate = () => new Date().toLocaleDateString("en-CA", { timeZone: COL_TZ });
-const colTime = () => new Date().toLocaleTimeString("en-GB", { timeZone: COL_TZ, hour: "2-digit", minute: "2-digit", hour12: false });
-const colMes  = () => colDate().slice(0, 7);
-
 const initPush = async () => {
   if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
   try { await navigator.serviceWorker.register("/sw.js"); } catch (_) {}
@@ -109,7 +104,7 @@ const sendPush = async (title, body, tag = "petflow") => {
 };
 
 const pushAlreadySent = (key) => {
-  const today = colDate();
+  const today = new Date().toISOString().slice(0, 10);
   try {
     const stored = JSON.parse(localStorage.getItem("petflow_pushes") || "{}");
     return !!stored[`${key}_${today}`];
@@ -117,10 +112,11 @@ const pushAlreadySent = (key) => {
 };
 
 const markPushSent = (key) => {
-  const today = colDate();
+  const today = new Date().toISOString().slice(0, 10);
   try {
     const stored = JSON.parse(localStorage.getItem("petflow_pushes") || "{}");
-    const cutoffStr = new Date(Date.now() - 7 * 86400000).toLocaleDateString("en-CA", { timeZone: COL_TZ });
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
     const cleaned = Object.fromEntries(Object.entries(stored).filter(([k]) => (k.split("_").pop() || "") >= cutoffStr));
     cleaned[`${key}_${today}`] = 1;
     localStorage.setItem("petflow_pushes", JSON.stringify(cleaned));
@@ -137,7 +133,7 @@ const sendEmail = async (cfg, to, subject, message) => {
       to_email:  to,
       subject,
       message,
-      from_name: cfg.fromName || "Voff App",
+      from_name: cfg.fromName || "PetFlow",
     }, cfg.publicKey);
   } catch (e) { console.error("EmailJS error:", e); }
 };
@@ -189,7 +185,7 @@ const INITIAL_DB = {
     hist_003: { id: "hist_003", mascotaId: "masc_001", clienteId: "cli_001", empresaId: "emp_001", fecha: "2025-09-20", tipo: "Cirugía", descripcion: "Esterilización", veterinario: "Dra. López", diagnostico: "Procedimiento exitoso", tratamientos: ["Cirugía (Perros y Gatos)", "Reposo (Perros y Gatos)"], medicamentos: [{ nombre: "Amoxicilina (Perros y Gatos)", dosis: "250mg — 1 cápsula", frecuencia: "Cada 12 horas", duracion: "7 días" }, { nombre: "Meloxicam (Perros y Gatos)", dosis: "0.5ml", frecuencia: "Una vez al día", duracion: "3 días" }], notas: "Usar collar isabelino hasta retirar puntos.", peso: "3.9 kg" },
   },
   ajustes: {
-    email: { serviceId: "", templateId: "", publicKey: "", fromName: "Voff App" },
+    email: { serviceId: "", templateId: "", publicKey: "", fromName: "PetFlow" },
     tratamientos: [
       "Antibioticoterapia (Perros y Gatos)", "Desparasitación interna (Perros y Gatos)", "Desparasitación externa (Perros y Gatos)",
       "Vacunación (Perros y Gatos)", "Fluidoterapia (Perros y Gatos)", "Reposo (Perros y Gatos)", "Dieta especial (Perros y Gatos)",
@@ -206,10 +202,6 @@ const INITIAL_DB = {
       "Enrofloxacina (Perros)", "Cefalexina (Perros)", "Prednisolona (Perros y Gatos)",
       "Atenolol (Gatos)", "Furosemida (Perros y Gatos)", "Interferon omega (Gatos)",
       "Maropitant (Perros y Gatos)", "Gabapentina (Perros y Gatos)", "Ciclosporina (Perros)", "Benazepril (Perros y Gatos)",
-    ],
-    motivosCitas: [
-      "Control", "Vacuna", "Peluquería", "Consulta general", "Cirugía", "Desparasitación",
-      "Urgencia", "Odontología", "Laboratorio", "Seguimiento",
     ],
   },
   notificaciones: {
@@ -843,7 +835,7 @@ const SlotGrid = ({ value, onChange, ocupados = [] }) => (
   </div>
 );
 
-const ModalNuevaCita = ({ cita, clientes, mascotas, sedes, citasExistentes, isAdmin, motivosCitas, onSave, onClose }) => {
+const ModalNuevaCita = ({ cita, clientes, mascotas, sedes, citasExistentes, isAdmin, onSave, onClose }) => {
   const [form, setForm] = useState(cita || { fecha: "", hora: "09:00", clienteId: "", mascotaId: "", sedeId: "", motivo: "", estado: "pendiente", notas: "" });
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
   const mascsFiltradas = isAdmin
@@ -857,8 +849,9 @@ const ModalNuevaCita = ({ cita, clientes, mascotas, sedes, citasExistentes, isAd
         .filter(c => c.fecha === form.fecha && c.estado !== "cancelada" && c.id !== cita?.id && (!form.sedeId || !c.sedeId || c.sedeId === form.sedeId))
         .map(c => c.hora)
     : [];
-  const _todayStr = colDate();
-  const _nowHHMM  = colTime();
+  const _now = new Date();
+  const _todayStr = _now.toISOString().slice(0, 10);
+  const _nowHHMM = `${String(_now.getHours()).padStart(2,"0")}:${String(_now.getMinutes()).padStart(2,"0")}`;
   const slotsPasados = form.fecha === _todayStr ? HORARIO_SLOTS.filter(s => s < _nowHHMM) : [];
   const ocupadosConPasados = [...new Set([...ocupados, ...slotsPasados])];
   const slotOcupado = ocupadosConPasados.includes(form.hora);
@@ -935,14 +928,7 @@ const ModalNuevaCita = ({ cita, clientes, mascotas, sedes, citasExistentes, isAd
           )}
           <div>
             <label style={LBL}>MOTIVO *</label>
-            {motivosCitas && motivosCitas.length > 0 ? (
-              <select className="input" value={form.motivo} onChange={e => f("motivo", e.target.value)}>
-                <option value="">Seleccionar motivo...</option>
-                {motivosCitas.map((m, i) => <option key={i} value={m}>{m}</option>)}
-              </select>
-            ) : (
-              <input className="input" value={form.motivo} onChange={e => f("motivo", e.target.value)} placeholder="Ej: Vacunación anual, Consulta general..." />
-            )}
+            <input className="input" value={form.motivo} onChange={e => f("motivo", e.target.value)} placeholder="Ej: Vacunación anual, Consulta general..." />
           </div>
           <div>
             <label style={LBL}>NOTAS ADICIONALES</label>
@@ -1026,7 +1012,7 @@ const TabInicio = ({ db, perfil }) => {
         <div>
           <h2 style={{ fontSize: 20, fontWeight: 800, color: T.tx1 }}>Bienvenido, {perfil.nombre} {perfil.apellido}</h2>
           <p style={{ fontSize: 13, color: T.tx3, marginTop: 3 }}>
-            {new Date().toLocaleDateString("es-CO", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: COL_TZ })}
+            {new Date().toLocaleDateString("es-CO", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
           </p>
         </div>
       </div>
@@ -1447,7 +1433,8 @@ const ModalHistorial = ({ historial, mascota, ajustes, onSave, onClose }) => {
   );
 };
 
-const ListaAjuste = ({ title, items, onAdd, onRemove, expanded, onToggle }) => {
+const ListaAjuste = ({ title, items, onAdd, onRemove }) => {
+  const [expanded, setExpanded] = useState(false);
   const [newVal, setNewVal] = useState("");
   const add = () => {
     const v = newVal.trim();
@@ -1457,58 +1444,51 @@ const ListaAjuste = ({ title, items, onAdd, onRemove, expanded, onToggle }) => {
   };
   return (
     <div className="card" style={{ padding: 24 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: expanded ? 16 : 0 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <h3 style={{ fontSize: 17, fontWeight: 800, color: T.tx1 }}>{title}</h3>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <span className="badge badge-primary">{items.length}</span>
-          <button onClick={onToggle} style={{ width: 34, height: 34, borderRadius: 10, border: "none", cursor: "pointer", background: T.bg, boxShadow: expanded ? "inset 3px 3px 7px #c5cdd8, inset -3px -3px 7px #ffffff" : "4px 4px 10px #c5cdd8, -4px -4px 10px #ffffff", display: "flex", alignItems: "center", justifyContent: "center", color: T.tx2, transition: "all 0.25s", flexShrink: 0 }}>
+          <button onClick={() => setExpanded(e => !e)} style={{ width: 34, height: 34, borderRadius: 10, border: "none", cursor: "pointer", background: T.bg, boxShadow: expanded ? "inset 3px 3px 7px #c5cdd8, inset -3px -3px 7px #ffffff" : "4px 4px 10px #c5cdd8, -4px -4px 10px #ffffff", display: "flex", alignItems: "center", justifyContent: "center", color: T.tx2, transition: "all 0.25s", flexShrink: 0 }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.25s" }}><polyline points="6 9 12 15 18 9"/></svg>
           </button>
         </div>
       </div>
       {expanded && (
-        <>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16, maxHeight: 280, overflowY: "auto" }}>
-            {items.map((item, i) => (
-              <div key={i} className="inset" style={{ padding: "9px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", borderRadius: 11 }}>
-                <span style={{ fontSize: 12.5, fontWeight: 600, color: T.tx1 }}>{item}</span>
-                <button onClick={() => onRemove(i)} style={{ background: "none", border: "none", cursor: "pointer", color: T.tx3, fontSize: 14, lineHeight: 1, padding: "2px 4px", borderRadius: 6, flexShrink: 0 }}>✕</button>
-              </div>
-            ))}
-            {items.length === 0 && <p style={{ fontSize: 13, color: T.tx3, textAlign: "center", padding: "8px 0" }}>Sin registros.</p>}
-          </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <input
-              className="input"
-              value={newVal}
-              onChange={e => setNewVal(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && add()}
-              placeholder={`Nuevo ${title.toLowerCase().slice(0, -1)}... Ej: Amoxicilina (Perros)`}
-              style={{ flex: 1 }}
-            />
-            <button className="btn-primary" style={{ padding: "12px 20px", flexShrink: 0 }} onClick={add}>+</button>
-          </div>
-        </>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16, maxHeight: 280, overflowY: "auto" }}>
+          {items.map((item, i) => (
+            <div key={i} className="inset" style={{ padding: "9px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", borderRadius: 11 }}>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: T.tx1 }}>{item}</span>
+              <button onClick={() => onRemove(i)} style={{ background: "none", border: "none", cursor: "pointer", color: T.tx3, fontSize: 14, lineHeight: 1, padding: "2px 4px", borderRadius: 6, flexShrink: 0 }}>✕</button>
+            </div>
+          ))}
+          {items.length === 0 && <p style={{ fontSize: 13, color: T.tx3, textAlign: "center", padding: "8px 0" }}>Sin registros.</p>}
+        </div>
       )}
+      <div style={{ display: "flex", gap: 10 }}>
+        <input
+          className="input"
+          value={newVal}
+          onChange={e => setNewVal(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && add()}
+          placeholder={`Nuevo ${title.toLowerCase().slice(0, -1)}... Ej: Amoxicilina (Perros)`}
+          style={{ flex: 1 }}
+        />
+        <button className="btn-primary" style={{ padding: "12px 20px", flexShrink: 0 }} onClick={add}>+</button>
+      </div>
     </div>
   );
 };
 
 const TabAjustes = ({ ajustes, onSave }) => {
-  const [trats,   setTrats]   = useState([...(ajustes?.tratamientos  || [])]);
-  const [meds,    setMeds]    = useState([...(ajustes?.medicamentos   || [])]);
-  const [motivos, setMotivos] = useState([...(ajustes?.motivosCitas   || [])]);
-  const [email, setEmail] = useState({ serviceId: "", templateId: "", publicKey: "", fromName: "Voff App", templates: {}, ...(ajustes?.email || {}) });
+  const [trats, setTrats] = useState([...(ajustes?.tratamientos || [])]);
+  const [meds,  setMeds]  = useState([...(ajustes?.medicamentos  || [])]);
+  const [email, setEmail] = useState({ serviceId: "", templateId: "", publicKey: "", fromName: "PetFlow", templates: {}, ...(ajustes?.email || {}) });
   const fe = (k, v) => setEmail(p => ({ ...p, [k]: v }));
   const setTpl = (tplKey, field, val) => setEmail(p => ({ ...p, templates: { ...p.templates, [tplKey]: { ...(DEFAULT_EMAIL_TEMPLATES[tplKey] || {}), ...(p.templates?.[tplKey] || {}), [field]: val } } }));
   const getTpl = (tplKey, field) => email.templates?.[tplKey]?.[field] ?? DEFAULT_EMAIL_TEMPLATES[tplKey]?.[field] ?? "";
-  const [expandedTpl,   setExpandedTpl]   = useState(null);
-  const [showEmail,     setShowEmail]     = useState(false);
-  const [showPlantillas, setShowPlantillas] = useState(false);
-  const [openList, setOpenList] = useState(null);
-  const toggleList = (key) => setOpenList(p => p === key ? null : key);
+  const [expandedTpl, setExpandedTpl] = useState(null);
 
-  const handleSave = () => { onSave({ tratamientos: trats, medicamentos: meds, motivosCitas: motivos, email }); alert("✓ Ajustes guardados"); };
+  const handleSave = () => { onSave({ tratamientos: trats, medicamentos: meds, email }); alert("✓ Ajustes guardados"); };
 
   return (
     <div>
@@ -1518,98 +1498,83 @@ const TabAjustes = ({ ajustes, onSave }) => {
       </div>
       <p style={{ fontSize: 14, color: T.tx2, marginBottom: 28 }}>Configura las listas del historial médico y el servicio de correo para notificaciones.</p>
 
-      {/* Correo de notificaciones — colapsable */}
+      {/* Correo de notificaciones */}
       <div className="card" style={{ padding: 24, marginBottom: 24 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div className="inset" style={{ width: 36, height: 36, borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", color: T.primary, flexShrink: 0 }}>{Icons.bell}</div>
-            <div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: T.tx1 }}>Correo de Notificaciones (EmailJS)</h3>
-              <p style={{ fontSize: 11, color: T.tx3, marginTop: 2 }}>Credenciales para envío de correos automáticos</p>
-            </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+          <div className="inset" style={{ width: 36, height: 36, borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", color: T.primary, flexShrink: 0 }}>{Icons.bell}</div>
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: T.tx1 }}>Correo de Notificaciones (EmailJS)</h3>
+            <p style={{ fontSize: 11, color: T.tx3, marginTop: 2 }}>Crea tu cuenta gratuita en <strong>emailjs.com</strong>, conecta tu correo con dominio propio y pega aquí las credenciales.</p>
           </div>
-          <button onClick={() => setShowEmail(e => !e)} style={{ width: 34, height: 34, borderRadius: 10, border: "none", cursor: "pointer", background: T.bg, boxShadow: showEmail ? "inset 3px 3px 7px #c5cdd8, inset -3px -3px 7px #ffffff" : "4px 4px 10px #c5cdd8, -4px -4px 10px #ffffff", display: "flex", alignItems: "center", justifyContent: "center", color: T.tx2, flexShrink: 0 }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showEmail ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.25s" }}><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
         </div>
-        {showEmail && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16, marginTop: 18 }}>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 6 }}>SERVICE ID</label>
-              <input className="input" value={email.serviceId} onChange={e => fe("serviceId", e.target.value)} placeholder="service_xxxxxxx" />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 6 }}>TEMPLATE ID</label>
-              <input className="input" value={email.templateId} onChange={e => fe("templateId", e.target.value)} placeholder="template_xxxxxxx" />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 6 }}>PUBLIC KEY</label>
-              <input className="input" value={email.publicKey} onChange={e => fe("publicKey", e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxx" />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 6 }}>NOMBRE REMITENTE</label>
-              <input className="input" value={email.fromName} onChange={e => fe("fromName", e.target.value)} placeholder="Voff App" />
-            </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16, marginTop: 18 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 6 }}>SERVICE ID</label>
+            <input className="input" value={email.serviceId} onChange={e => fe("serviceId", e.target.value)} placeholder="service_xxxxxxx" />
           </div>
-        )}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 6 }}>TEMPLATE ID</label>
+            <input className="input" value={email.templateId} onChange={e => fe("templateId", e.target.value)} placeholder="template_xxxxxxx" />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 6 }}>PUBLIC KEY</label>
+            <input className="input" value={email.publicKey} onChange={e => fe("publicKey", e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxx" />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 6 }}>NOMBRE REMITENTE</label>
+            <input className="input" value={email.fromName} onChange={e => fe("fromName", e.target.value)} placeholder="PetFlow" />
+          </div>
+        </div>
       </div>
 
-      {/* Plantillas de mensajes — colapsable */}
+      {/* Plantillas de mensajes */}
       <div className="card" style={{ padding: 24, marginBottom: 24 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div className="inset" style={{ width: 36, height: 36, borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", color: T.primary, flexShrink: 0 }}>{Icons.historial}</div>
-            <div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: T.tx1 }}>Mensajes de Notificación</h3>
-              <p style={{ fontSize: 11, color: T.tx3, marginTop: 2 }}>Personaliza asunto y cuerpo de cada correo</p>
-            </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+          <div className="inset" style={{ width: 36, height: 36, borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", color: T.primary, flexShrink: 0 }}>{Icons.historial}</div>
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: T.tx1 }}>Mensajes de Notificación</h3>
+            <p style={{ fontSize: 11, color: T.tx3, marginTop: 2 }}>Personaliza el asunto y cuerpo de cada correo. Usa las variables entre llaves para insertar datos reales.</p>
           </div>
-          <button onClick={() => setShowPlantillas(e => !e)} style={{ width: 34, height: 34, borderRadius: 10, border: "none", cursor: "pointer", background: T.bg, boxShadow: showPlantillas ? "inset 3px 3px 7px #c5cdd8, inset -3px -3px 7px #ffffff" : "4px 4px 10px #c5cdd8, -4px -4px 10px #ffffff", display: "flex", alignItems: "center", justifyContent: "center", color: T.tx2, flexShrink: 0 }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showPlantillas ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.25s" }}><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
         </div>
-        {showPlantillas && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 18 }}>
-            {["Veterinaria", "Cliente"].map(dest => (
-              <div key={dest}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: T.tx3, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6, marginTop: dest === "Cliente" ? 12 : 0 }}>→ Se envía al: {dest}</div>
-                {EMAIL_TEMPLATE_META.filter(t => t.dest === dest).map(meta => {
-                  const open = expandedTpl === meta.key;
-                  return (
-                    <div key={meta.key} className="inset" style={{ borderRadius: 14, overflow: "hidden" }}>
-                      <button onClick={() => setExpandedTpl(open ? null : meta.key)} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: T.tx1 }}>{meta.label}</span>
-                          {meta.vars !== "—" && <span style={{ fontSize: 10, color: T.tx3, background: T.bg, borderRadius: 6, padding: "2px 7px", fontFamily: "monospace", whiteSpace: "nowrap" }}>{meta.vars}</span>}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {["Veterinaria", "Cliente"].map(dest => (
+            <div key={dest}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: T.tx3, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6, marginTop: dest === "Cliente" ? 12 : 0 }}>→ Se envía al: {dest}</div>
+              {EMAIL_TEMPLATE_META.filter(t => t.dest === dest).map(meta => {
+                const open = expandedTpl === meta.key;
+                return (
+                  <div key={meta.key} className="inset" style={{ borderRadius: 14, overflow: "hidden" }}>
+                    <button onClick={() => setExpandedTpl(open ? null : meta.key)} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: T.tx1 }}>{meta.label}</span>
+                        {meta.vars !== "—" && <span style={{ fontSize: 10, color: T.tx3, background: T.bg, borderRadius: 6, padding: "2px 7px", fontFamily: "monospace", whiteSpace: "nowrap" }}>{meta.vars}</span>}
+                      </div>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.tx3} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                    {open && (
+                      <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 5 }}>ASUNTO</label>
+                          <input className="input" style={{ fontSize: 13 }} value={getTpl(meta.key, "subject")} onChange={e => setTpl(meta.key, "subject", e.target.value)} placeholder={DEFAULT_EMAIL_TEMPLATES[meta.key]?.subject} />
                         </div>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.tx3} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}><polyline points="6 9 12 15 18 9"/></svg>
-                      </button>
-                      {open && (
-                        <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-                          <div>
-                            <label style={{ fontSize: 11, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 5 }}>ASUNTO</label>
-                            <input className="input" style={{ fontSize: 13 }} value={getTpl(meta.key, "subject")} onChange={e => setTpl(meta.key, "subject", e.target.value)} placeholder={DEFAULT_EMAIL_TEMPLATES[meta.key]?.subject} />
-                          </div>
-                          <div>
-                            <label style={{ fontSize: 11, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 5 }}>MENSAJE</label>
-                            <textarea className="input" rows={3} style={{ resize: "vertical", fontSize: 13 }} value={getTpl(meta.key, "body")} onChange={e => setTpl(meta.key, "body", e.target.value)} placeholder={DEFAULT_EMAIL_TEMPLATES[meta.key]?.body} />
-                          </div>
-                          <button className="btn" style={{ alignSelf: "flex-start", padding: "5px 14px", fontSize: 11 }} onClick={() => setTpl(meta.key, "subject", DEFAULT_EMAIL_TEMPLATES[meta.key]?.subject) || setTpl(meta.key, "body", DEFAULT_EMAIL_TEMPLATES[meta.key]?.body)}>Restaurar original</button>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 5 }}>MENSAJE</label>
+                          <textarea className="input" rows={3} style={{ resize: "vertical", fontSize: 13 }} value={getTpl(meta.key, "body")} onChange={e => setTpl(meta.key, "body", e.target.value)} placeholder={DEFAULT_EMAIL_TEMPLATES[meta.key]?.body} />
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        )}
+                        <button className="btn" style={{ alignSelf: "flex-start", padding: "5px 14px", fontSize: 11 }} onClick={() => setTpl(meta.key, "subject", DEFAULT_EMAIL_TEMPLATES[meta.key]?.subject) || setTpl(meta.key, "body", DEFAULT_EMAIL_TEMPLATES[meta.key]?.body)}>Restaurar original</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 24 }}>
-        <ListaAjuste title="Motivos de Citas" items={motivos} onAdd={v => setMotivos(p => [...p, v])} onRemove={i => setMotivos(p => p.filter((_, j) => j !== i))} expanded={openList === "motivos"} onToggle={() => toggleList("motivos")} />
-        <ListaAjuste title="Tratamientos"     items={trats}   onAdd={v => setTrats(p => [...p, v])}   onRemove={i => setTrats(p => p.filter((_, j) => j !== i))}   expanded={openList === "trats"}   onToggle={() => toggleList("trats")} />
-        <ListaAjuste title="Medicamentos"     items={meds}    onAdd={v => setMeds(p => [...p, v])}    onRemove={i => setMeds(p => p.filter((_, j) => j !== i))}    expanded={openList === "meds"}    onToggle={() => toggleList("meds")} />
+        <ListaAjuste title="Tratamientos" items={trats} onAdd={v => setTrats(p => [...p, v])} onRemove={i => setTrats(p => p.filter((_, j) => j !== i))} />
+        <ListaAjuste title="Medicamentos" items={meds}  onAdd={v => setMeds(p => [...p, v])}  onRemove={i => setMeds(p => p.filter((_, j) => j !== i))} />
       </div>
     </div>
   );
@@ -1649,7 +1614,7 @@ const usePushEngine = (db, empresa, clienteId = null) => {
   useEffect(() => {
     if (!empresaId) return;
     const pushOn = ("Notification" in window) && Notification.permission === "granted";
-    const today  = colDate();
+    const today  = new Date().toISOString().slice(0, 10);
     const mmdd   = today.slice(5);
 
     // Solo mascotas de esta empresa; si es panel cliente, solo las suyas
@@ -1856,7 +1821,7 @@ const PanelSuperAdmin = ({ onLogout, db, setDb }) => {
           </div>
           {(isMobile || !collapsed) && (
             <div style={{ whiteSpace: "nowrap" }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: T.tx1, letterSpacing: "-0.3px" }}>Voff App</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: T.tx1, letterSpacing: "-0.3px" }}>PetFlow</div>
               <div style={{ fontSize: 11, color: T.tx3, fontWeight: 500, marginTop: 1 }}>Admin Panel</div>
             </div>
           )}
@@ -1917,7 +1882,7 @@ const PanelSuperAdmin = ({ onLogout, db, setDb }) => {
             )}
             <div>
               <h1 style={{ fontSize: isMobile ? 20 : 32, fontWeight: 800, color: T.tx1 }}></h1>
-              {!isMobile && <p style={{ color: T.tx3, marginTop: 4, fontSize: 15 }}>Gestión completa del sistema Voff App</p>}
+              {!isMobile && <p style={{ color: T.tx3, marginTop: 4, fontSize: 15 }}>Gestión completa del sistema PetFlow</p>}
             </div>
           </div>
 
@@ -1931,8 +1896,8 @@ const PanelSuperAdmin = ({ onLogout, db, setDb }) => {
               onClick={() => setUserMenu(m => !m)}
               title={perfil.nombre}
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2.823.47-4.113 6.006-4 7 .08.703 1.725 1.722 3.656 2.115"/><path d="M14.267 5.172c0-1.39 1.577-2.493 3.5-2.172 2.823.47 4.113 6.006 4 7-.08.703-1.725 1.722-3.656 2.115"/><path d="M8 14v.5"/><path d="M16 14v.5"/><path d="M11.25 16.25h1.5L12 17l-.75-.75Z"/><path d="M4.42 11.247A13.152 13.152 0 0 0 4 14.556C4 18.728 7.582 21 12 21s8-2.272 8-6.444c0-1.061-.162-2.2-.493-3.309m-9.243-6.082A8.801 8.801 0 0 1 12 5c.78 0 1.5.108 2.161.306"/>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
               </svg>
             </button>
 
@@ -2305,11 +2270,11 @@ const Login = ({ onLogin, db }) => {
         {/* Logo + título */}
         <div style={{ textAlign: "center", marginBottom: 40 }}>
           <div style={{ marginBottom: 24, display: "flex", justifyContent: "center" }}>
-            <div style={{ width: 124, height: 124, borderRadius: 36, background: T.surface, boxShadow: "inset 22px 22px 50px #a8b6c4, inset -22px -22px 50px #ffffff, inset 0 2px 8px rgba(0,0,0,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 124, height: 124, borderRadius: 36, background: T.surface, boxShadow: "20px 20px 44px #b8c4d0, -20px -20px 44px #ffffff, inset 0 0 0 1px rgba(255,255,255,0.9)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <LogoImg size={160} />
             </div>
           </div>
-          <h1 style={{ fontSize: 32, fontWeight: 800, color: T.tx1 }}>Voff App</h1>
+          <h1 style={{ fontSize: 32, fontWeight: 800, color: T.tx1 }}>PetFlow</h1>
         </div>
 
         {/* Formulario */}
@@ -2395,7 +2360,7 @@ const PanelAdmin = ({ auth, onLogout, db, setDb }) => {
   const misMascotas = Object.values(db.mascotas || {}).filter(m => misClientes.some(c => c.id === m.clienteId));
   const misCitas = Object.values(db.citas || {}).filter(c => c.empresaId === adminData.empresaId && (!adminData.sedeId || !c.sedeId || c.sedeId === adminData.sedeId));
   const citasPorFecha = misCitas.reduce((acc, c) => { if (!acc[c.fecha]) acc[c.fecha] = []; acc[c.fecha].push(c); return acc; }, {});
-  const hoyStr = colDate();
+  const hoyStr = new Date().toISOString().slice(0, 10);
   const mesStr = hoyStr.slice(0, 7);
   const nCitasHoy = misCitas.filter(c => c.fecha === hoyStr).length;
   const nCitasMes = misCitas.filter(c => c.fecha.startsWith(mesStr)).length;
@@ -2445,7 +2410,7 @@ const PanelAdmin = ({ auth, onLogout, db, setDb }) => {
     alert("✓ Mascota eliminada");
   };
   const citaNotif = (citaForm, tipo) => {
-    const hoy = colDate();
+    const hoy = new Date().toISOString().slice(0, 10);
     const fmtC = (f) => f ? new Date(f + "T12:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" }) : "—";
     const nId = `notif_cita_${tipo}_${citaForm.id || citaForm.fecha + citaForm.hora}`;
     const msgs = {
@@ -2461,7 +2426,7 @@ const PanelAdmin = ({ auth, onLogout, db, setDb }) => {
   const saveCita = (form) => {
     const id = form.id || `cita_${Date.now()}`;
     const prevCita = db.citas?.[form.id];
-    const hoy = colDate();
+    const hoy = new Date().toISOString().slice(0, 10);
     const saved = { ...form, id, empresaId: adminData.empresaId, sedeId: form.sedeId || adminData.sedeId || "", adminId: auth.id };
     let notifs = {};
     if (!prevCita && form.clienteId) {
@@ -2525,7 +2490,7 @@ const PanelAdmin = ({ auth, onLogout, db, setDb }) => {
   const saveHistorialAdmin = (form) => {
     const id = form.id || `hist_${Date.now()}`;
     const masc = db.mascotas[form.mascotaId];
-    const hoy = colDate();
+    const hoy = new Date().toISOString().slice(0, 10);
     const newNotifs = {};
     (form.medicamentos || []).forEach(med => {
       const obj = typeof med === "string" ? { nombre: med } : med;
@@ -2650,7 +2615,7 @@ const PanelAdmin = ({ auth, onLogout, db, setDb }) => {
           />
           <div style={{ position: "relative" }}>
             <button className="btn" style={{ borderRadius: "50%", padding: 0, width: 46, height: 46 }} onClick={() => setUserMenu(m => !m)}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2.823.47-4.113 6.006-4 7 .08.703 1.725 1.722 3.656 2.115"/><path d="M14.267 5.172c0-1.39 1.577-2.493 3.5-2.172 2.823.47 4.113 6.006 4 7-.08.703-1.725 1.722-3.656 2.115"/><path d="M8 14v.5"/><path d="M16 14v.5"/><path d="M11.25 16.25h1.5L12 17l-.75-.75Z"/><path d="M4.42 11.247A13.152 13.152 0 0 0 4 14.556C4 18.728 7.582 21 12 21s8-2.272 8-6.444c0-1.061-.162-2.2-.493-3.309m-9.243-6.082A8.801 8.801 0 0 1 12 5c.78 0 1.5.108 2.161.306"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </button>
             {userMenu && (
               <>
@@ -2687,7 +2652,7 @@ const PanelAdmin = ({ auth, onLogout, db, setDb }) => {
                 <div>
                   <h2 style={{ fontSize: 20, fontWeight: 800, color: T.tx1 }}>Bienvenido, {perfil.nombre}</h2>
                   <p style={{ fontSize: 13, color: T.tx3, marginTop: 3 }}>
-                    {empresa?.nombre}{sede ? ` · ${sede.nombre}` : ""} · {new Date().toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: COL_TZ })}
+                    {empresa?.nombre}{sede ? ` · ${sede.nombre}` : ""} · {new Date().toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
                   </p>
                 </div>
               </div>
@@ -2885,7 +2850,7 @@ const PanelAdmin = ({ auth, onLogout, db, setDb }) => {
         {tab === "vacunas" && (() => {
           const misVacunas = Object.values(db.vacunas || {}).filter(v => v.empresaId === adminData.empresaId).sort((a, b) => b.fecha.localeCompare(a.fecha));
           const fmtFecha = (f) => f ? new Date(f + "T12:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" }) : "—";
-          const hoy = colDate();
+          const hoy = new Date().toISOString().slice(0, 10);
           const vacFiltradas = filtroMascotaVac ? misVacunas.filter(v => v.mascotaId === filtroMascotaVac) : misVacunas;
           const proximasAlert = misVacunas.filter(v => {
             if (!v.proximaDosis) return false;
@@ -2985,7 +2950,7 @@ const PanelAdmin = ({ auth, onLogout, db, setDb }) => {
 
         {/* ── Citas ── */}
         {tab === "citas" && (() => {
-          const hoy = colDate();
+          const hoy = new Date().toISOString().slice(0, 10);
           const citasFiltradas = misCitas
             .filter(c => !filtroSedeC || c.sedeId === filtroSedeC)
             .filter(c => !filtrEstadoC || c.estado === filtrEstadoC);
@@ -3137,7 +3102,6 @@ const PanelAdmin = ({ auth, onLogout, db, setDb }) => {
             sedes={Object.fromEntries(misSedes.map(s => [s.id, s]))}
             citasExistentes={misCitas}
             isAdmin
-            motivosCitas={db.ajustes?.motivosCitas || []}
             onSave={saveCita}
             onClose={() => setModalCita(null)}
           />
@@ -3220,7 +3184,7 @@ const ModalVacuna = ({ vacuna, mascota, mascotas, onSave, onClose }) => {
   const todosNombres = [...NOMBRES_VACUNAS, ...NOMBRES_DESPARASITANTES];
   const [form, setForm] = useState(vacuna || {
     mascotaId: mascota?.id || "",
-    nombre: "", tipo: "vacuna", fecha: colDate(),
+    nombre: "", tipo: "vacuna", fecha: new Date().toISOString().slice(0, 10),
     proximaDosis: "", veterinario: "", lote: "", notas: "",
   });
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
@@ -3406,7 +3370,7 @@ const buildMedEventos = (historial, mascotas) => {
         if (i % cadaN !== 0) continue;
         const d = new Date(base);
         d.setDate(d.getDate() + i);
-        const key = d.toLocaleDateString("en-CA", { timeZone: COL_TZ });
+        const key = d.toISOString().slice(0, 10);
         if (!eventos[key]) eventos[key] = [];
         (horas.length > 0 ? horas : ["—"]).forEach(hora => {
           eventos[key].push({ tipo: "medicamento", histId: h.id, nombre: obj.nombre.split(" (")[0], dosis: obj.dosis, hora, mascotaNombre: masc?.nombre || "" });
@@ -3436,7 +3400,7 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
   const misMascotas = Object.values(db.mascotas || {}).filter(m => m.clienteId === auth.id);
   const misCitas = Object.values(db.citas || {}).filter(c => c.clienteId === auth.id).sort((a, b) => b.fecha.localeCompare(a.fecha) || b.hora.localeCompare(a.hora));
   const misHistorial = Object.values(db.historialMedico || {}).filter(h => h.clienteId === auth.id).sort((a, b) => b.fecha.localeCompare(a.fecha));
-  const hoy = colDate();
+  const hoy = new Date().toISOString().slice(0, 10);
   const proxCitas = misCitas.filter(c => c.fecha >= hoy && c.estado !== "cancelada");
 
   const marcarLeida = (id) => setDb(prev => ({ ...prev, notificaciones: { ...prev.notificaciones, [id]: { ...prev.notificaciones[id], leida: true } } }));
@@ -3456,7 +3420,7 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
   };
   const saveCita = (form) => {
     const id = form.id || `cita_${Date.now()}`;
-    const hoy = colDate();
+    const hoy = new Date().toISOString().slice(0, 10);
     const isNew = !form.id;
     const fmtC = (f) => f ? new Date(f + "T12:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" }) : "—";
     const notifs = {};
@@ -3495,7 +3459,7 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
   const cancelarCita = (id) => {
     if (!confirm("¿Cancelar esta cita?")) return;
     const cita = db.citas?.[id];
-    const hoy = colDate();
+    const hoy = new Date().toISOString().slice(0, 10);
     const fmtC = (f) => f ? new Date(f + "T12:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" }) : "—";
     const nId = `notif_cita_cancel_cli_${id}`;
     const notif = { [nId]: { id: nId, leida: false, fecha: hoy, tipo: "citas", empresaId: cliente.empresaId, clienteId: null,
@@ -3555,7 +3519,7 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
 
   // Check for upcoming vaccine/deworming doses and generate notifications
   useEffect(() => {
-    const hoy = colDate();
+    const hoy = new Date().toISOString().slice(0, 10);
     const misVacunas = Object.values(db.vacunas || {}).filter(v => v.clienteId === auth.id);
     const notifsPorGenerar = {};
     misVacunas.forEach(v => {
@@ -3663,7 +3627,7 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
             <CampanaNotificaciones notificaciones={notifCliente} onMarcarLeida={marcarLeida} onMarcarTodas={marcarTodas} />
             <div style={{ position: "relative" }}>
               <button className="btn" style={{ borderRadius: "50%", padding: 0, width: 46, height: 46 }} onClick={() => setUserMenu(m => !m)}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2.823.47-4.113 6.006-4 7 .08.703 1.725 1.722 3.656 2.115"/><path d="M14.267 5.172c0-1.39 1.577-2.493 3.5-2.172 2.823.47 4.113 6.006 4 7-.08.703-1.725 1.722-3.656 2.115"/><path d="M8 14v.5"/><path d="M16 14v.5"/><path d="M11.25 16.25h1.5L12 17l-.75-.75Z"/><path d="M4.42 11.247A13.152 13.152 0 0 0 4 14.556C4 18.728 7.582 21 12 21s8-2.272 8-6.444c0-1.061-.162-2.2-.493-3.309m-9.243-6.082A8.801 8.801 0 0 1 12 5c.78 0 1.5.108 2.161.306"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </button>
               {userMenu && (
                 <>
@@ -3696,7 +3660,7 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
               </div>
               <div style={{ flex: 1 }}>
                 <h2 style={{ fontSize: 20, fontWeight: 800, color: T.tx1 }}>Bienvenido, {cliente.nombres}</h2>
-                <p style={{ fontSize: 13, color: T.tx3, marginTop: 3 }}>{empresa?.nombre || ""} · {new Date().toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: COL_TZ })}</p>
+                <p style={{ fontSize: 13, color: T.tx3, marginTop: 3 }}>{empresa?.nombre || ""} · {new Date().toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
               </div>
             </div>
             <div className="metrics-grid" style={{ gap: 20, marginBottom: 28 }}>
@@ -3836,7 +3800,7 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
         {/* ── VACUNAS ── */}
         {tab === "vacunas" && (() => {
           const misVacunas = Object.values(db.vacunas || {}).filter(v => v.clienteId === auth.id).sort((a, b) => b.fecha.localeCompare(a.fecha));
-          const hoy = colDate();
+          const hoy = new Date().toISOString().slice(0, 10);
           const fmtF = (f) => f ? new Date(f + "T12:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" }) : "—";
           const statusDosis = (proxDosis) => {
             if (!proxDosis) return null;
@@ -4195,7 +4159,6 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
           clientes={{ [auth.id]: db.clientes[auth.id] }}
           mascotas={Object.fromEntries(misMascotas.map(m => [m.id, m]))}
           citasExistentes={misCitas}
-          motivosCitas={db.ajustes?.motivosCitas || []}
           onSave={saveCita}
           onClose={() => setModalCita(null)}
         />
@@ -4217,11 +4180,7 @@ export default function PetFlow() {
     const unsub = onSnapshot(DB_REF, (snap) => {
       if (snap.exists()) {
         fromRemote.current = true;
-        const remote = snap.data();
-        setDb({
-          ...remote,
-          ajustes: { ...INITIAL_DB.ajustes, ...remote.ajustes },
-        });
+        setDb(snap.data());
       } else {
         // Primera vez: siembra la BD con los datos iniciales
         setDoc(DB_REF, INITIAL_DB);
@@ -4244,7 +4203,7 @@ export default function PetFlow() {
   if (!dbReady) return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "Inter, sans-serif", color: "#6b7280", gap: 16 }}>
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3f8fb0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg>
-      <span style={{ fontSize: 15, fontWeight: 600 }}>Cargando Voff App…</span>
+      <span style={{ fontSize: 15, fontWeight: 600 }}>Cargando PetFlow…</span>
     </div>
   );
 
