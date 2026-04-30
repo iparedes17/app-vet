@@ -2309,7 +2309,7 @@ const Login = ({ onLogin, db }) => {
               <LogoImg size={160} />
             </div>
           </div>
-          <h1 style={{ fontSize: 32, fontWeight: 800, color: "#2b7c9d" }}>Voff App</h1>
+          <h1 style={{ fontSize: 32, fontWeight: 800, color: "#1a5a72", letterSpacing: "-0.5px", textShadow: "4px 4px 8px rgba(255,255,255,1), -3px -3px 6px rgba(130,155,180,0.95), 0 2px 4px rgba(100,130,160,0.4)" }}>Voff App</h1>
         </div>
 
         {/* Formulario */}
@@ -4263,8 +4263,8 @@ const LoadingScreen = () => {
         </div>
       ))}
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 18, zIndex: 10 }}>
-        <div style={{ animation: "logoPulse 1.8s ease-in-out infinite" }}>
-          <PawPrint color="white" size={80} />
+        <div style={{ animation: "logoPulse 1.8s ease-in-out infinite", width: 90, height: 90, borderRadius: 24, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.25)" }}>
+          <img src="/logo.png" alt="Voff App" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
         </div>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 34, fontWeight: 800, color: "white", letterSpacing: "-0.5px", textShadow: "0 2px 16px rgba(0,0,0,0.2)" }}>Voff App</div>
