@@ -31,7 +31,7 @@ const T = {
   nmSm: "6px 6px 14px #c5cdd8, -6px -6px 14px #ffffff",
   nmHover: "14px 14px 28px #c5cdd8, -14px -14px 28px #ffffff",
   primary: "#3f8fb0", primaryLight: "#6ab8ce",
-  emerald: "#10b981", rose: "#f43f5e", roseDark: "#e11d48",
+  emerald: "#2b7c9d", rose: "#f43f5e", roseDark: "#e11d48",
   tx1: "#1e293b", tx2: "#475569", tx3: "#94a3b8",
 };
 
@@ -237,12 +237,12 @@ body { background: ${T.bg}; color: ${T.tx1}; font-family: 'Montserrat', sans-ser
 .btn:hover { box-shadow: ${T.nmHover}; color: ${T.tx1}; transform: translateY(-2px); }
 .btn:active { box-shadow: ${T.nmIn}; transform: translateY(0); }
 .btn:disabled, .btn-primary:disabled, .btn-success:disabled, .btn-danger:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
-.btn-primary { background: linear-gradient(135deg, ${T.primary}, ${T.primaryLight}); color: white; box-shadow: 6px 6px 16px rgba(63,143,176,0.4), -6px -6px 16px #ffffff; font-weight: 700; }
-.btn-primary:hover { box-shadow: 10px 10px 24px rgba(63,143,176,0.5), -10px -10px 24px #ffffff; color: white; transform: translateY(-2px); }
-.btn-primary:active { box-shadow: inset 4px 4px 10px rgba(25,70,90,0.45), inset -4px -4px 10px rgba(255,255,255,0.2); transform: translateY(0); }
-.btn-success { background: linear-gradient(135deg, ${T.emerald}, #34d399); color: white; box-shadow: 6px 6px 16px rgba(16,185,129,0.4), -6px -6px 16px #ffffff; font-weight: 700; }
-.btn-success:hover { box-shadow: 10px 10px 24px rgba(16,185,129,0.5), -10px -10px 24px #ffffff; color: white; transform: translateY(-2px); }
-.btn-success:active { box-shadow: inset 4px 4px 10px rgba(5,100,65,0.45), inset -4px -4px 10px rgba(255,255,255,0.2); transform: translateY(0); }
+.btn-primary { background: linear-gradient(135deg, #3f8fb0, #014457); color: white; box-shadow: 6px 6px 16px rgba(1,68,87,0.35), -6px -6px 16px #ffffff; font-weight: 700; }
+.btn-primary:hover { box-shadow: 10px 10px 24px rgba(1,68,87,0.45), -10px -10px 24px #ffffff; color: white; transform: translateY(-2px); }
+.btn-primary:active { box-shadow: inset 4px 4px 10px rgba(1,40,55,0.5), inset -4px -4px 10px rgba(255,255,255,0.2); transform: translateY(0); }
+.btn-success { background: linear-gradient(135deg, #3f8fb0, #014457); color: white; box-shadow: 6px 6px 16px rgba(1,68,87,0.35), -6px -6px 16px #ffffff; font-weight: 700; }
+.btn-success:hover { box-shadow: 10px 10px 24px rgba(1,68,87,0.45), -10px -10px 24px #ffffff; color: white; transform: translateY(-2px); }
+.btn-success:active { box-shadow: inset 4px 4px 10px rgba(1,40,55,0.5), inset -4px -4px 10px rgba(255,255,255,0.2); transform: translateY(0); }
 .btn-danger { background: linear-gradient(135deg, ${T.rose}, ${T.roseDark}); color: white; box-shadow: 6px 6px 16px rgba(244,63,94,0.4), -6px -6px 16px #ffffff; font-weight: 700; }
 .btn-danger:hover { box-shadow: 10px 10px 24px rgba(244,63,94,0.5), -10px -10px 24px #ffffff; color: white; transform: translateY(-2px); }
 .btn-danger:active { box-shadow: inset 4px 4px 10px rgba(150,15,35,0.45), inset -4px -4px 10px rgba(255,255,255,0.2); transform: translateY(0); }
@@ -252,7 +252,7 @@ body { background: ${T.bg}; color: ${T.tx1}; font-family: 'Montserrat', sans-ser
 select.input { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 9L1 4h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px; }
 .badge { padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-block; box-shadow: ${T.nmSm}; }
 .badge-primary { background: rgba(63,143,176,0.12); color: ${T.primary}; border: 1px solid rgba(63,143,176,0.2); }
-.badge-success { background: rgba(16,185,129,0.12); color: ${T.emerald}; border: 1px solid rgba(16,185,129,0.2); }
+.badge-success { background: rgba(43,124,157,0.12); color: ${T.emerald}; border: 1px solid rgba(43,124,157,0.25); }
 .toggle { position: relative; width: 52px; height: 28px; border-radius: 20px; cursor: pointer; }
 .toggle-bg { position: absolute; inset: 0; border-radius: 20px; transition: all 0.4s; }
 .toggle-handle { position: absolute; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: white; box-shadow: 2px 2px 6px rgba(0,0,0,0.15); transition: all 0.4s; }
@@ -285,11 +285,7 @@ select.input { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg
 
 const LBL = { fontSize: 13, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 8 };
 
-const PasswordHint = () => (
-  <p style={{ fontSize: 11, color: T.tx3, marginTop: 6, fontWeight: 500, letterSpacing: "0.1px" }}>
-    Mínimo una mayúscula y un carácter especial (!@#$%&*)
-  </p>
-);
+const PasswordHint = () => null;
 
 const Toggle = ({ checked, onChange }) => (
   <div className="toggle" onClick={() => onChange(!checked)}>
@@ -689,7 +685,7 @@ const CampanaNotificaciones = ({ notificaciones, onMarcarLeida, onMarcarTodas })
 const ESTADO_CITA = [
   { v: "pendiente",  l: "Pendiente",  c: "#f59e0b" },
   { v: "confirmada", l: "Confirmada", c: "#3f8fb0"  },
-  { v: "completada", l: "Completada", c: "#10b981"  },
+  { v: "completada", l: "Completada", c: "#2b7c9d"  },
   { v: "cancelada",  l: "Cancelada",  c: "#f43f5e"  },
 ];
 
@@ -1287,7 +1283,7 @@ const MedicamentosForm = ({ medicamentos, allMeds, onChange }) => {
             <button key={nombre} type="button"
               onClick={() => toggleMed(nombre)}
               style={{ padding: "7px 16px", borderRadius: 20, fontSize: 12, fontWeight: 700, border: "1px solid rgba(255,255,255,0.5)", cursor: "pointer", transition: "all 0.18s ease",
-                background: active ? `linear-gradient(135deg, ${T.emerald}, #34d399)` : T.surface,
+                background: active ? `linear-gradient(135deg, #3f8fb0, #014457)` : T.surface,
                 color: active ? "white" : T.tx2,
                 boxShadow: active ? `inset 3px 3px 8px rgba(5,90,60,0.35), inset -3px -3px 8px rgba(255,255,255,0.1)` : T.nmSm,
               }}>
@@ -2318,7 +2314,7 @@ const Login = ({ onLogin, db }) => {
             <label style={{ fontSize: 13, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 8 }}>EMAIL</label>
             <input className="input" type="email" value={email}
               onChange={e => { setEmail(e.target.value); setError(""); }}
-              placeholder="superadmin@petflow.io" />
+              placeholder="correo@ejemplo.com" />
           </div>
           <div>
             <label style={{ fontSize: 13, fontWeight: 700, color: T.tx2, display: "block", marginBottom: 8 }}>CONTRASEÑA</label>
@@ -2811,7 +2807,7 @@ const PanelAdmin = ({ auth, onLogout, db, setDb }) => {
             alert("✓ Registro guardado");
           };
           const deleteHistorial = (id) => { if (confirm("¿Eliminar este registro?")) { setDb(prev => { const { [id]: _, ...rest } = prev.historialMedico || {}; return { ...prev, historialMedico: rest }; }); } };
-          const TIPO_COL = { Consulta: T.primary, Vacuna: "#10b981", Cirugía: "#f59e0b", Urgencia: "#f43f5e", Desparasitación: "#8b5cf6", Control: "#0ea5e9", Otro: T.tx3 };
+          const TIPO_COL = { Consulta: T.primary, Vacuna: "#2b7c9d", Cirugía: "#f59e0b", Urgencia: "#f43f5e", Desparasitación: "#8b5cf6", Control: "#0ea5e9", Otro: T.tx3 };
           return (
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
@@ -2861,7 +2857,7 @@ const PanelAdmin = ({ auth, onLogout, db, setDb }) => {
                                 const obj = typeof med === "string" ? { nombre: med } : med;
                                 return (
                                   <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                                    <span style={{ fontSize: 12, fontWeight: 800, background: "#10b98118", color: "#10b981", padding: "3px 12px", borderRadius: 8 }}>{obj.nombre.split(" (")[0]}</span>
+                                    <span style={{ fontSize: 12, fontWeight: 800, background: "#2b7c9d18", color: "#2b7c9d", padding: "3px 12px", borderRadius: 8 }}>{obj.nombre.split(" (")[0]}</span>
                                     {obj.dosis && <span style={{ fontSize: 12, color: T.tx2 }}>{obj.dosis}</span>}
                                     {obj.frecuencia && <span style={{ fontSize: 11, color: T.tx3 }}>· {obj.frecuencia}</span>}
                                     {obj.duracion && <span style={{ fontSize: 11, color: T.tx3 }}>· {obj.duracion}</span>}
@@ -2899,7 +2895,7 @@ const PanelAdmin = ({ auth, onLogout, db, setDb }) => {
             if (diff < 0) return { label: "Vencida", color: "#f43f5e" };
             if (diff <= 7)  return { label: "Urgente", color: "#f43f5e" };
             if (diff <= 30) return { label: "Próxima", color: "#f59e0b" };
-            return { label: "Al día", color: "#10b981" };
+            return { label: "Al día", color: "#2b7c9d" };
           };
           return (
             <div>
@@ -3009,7 +3005,7 @@ const PanelAdmin = ({ auth, onLogout, db, setDb }) => {
                 {[
                   { label: "Hoy", value: nHoy, color: T.primary },
                   { label: "Pendientes", value: nPend, color: "#f59e0b" },
-                  { label: "Confirmadas", value: nConf, color: "#10b981" },
+                  { label: "Confirmadas", value: nConf, color: "#2b7c9d" },
                 ].map(s => (
                   <div key={s.label} className="inset" style={{ padding: "14px 16px", borderRadius: 16, textAlign: "center" }}>
                     <div style={{ fontSize: 26, fontWeight: 800, color: s.color }}>{s.value}</div>
@@ -3369,7 +3365,7 @@ const MENU_CLIENTE = [
   { id: "citas",     label: "Citas",     iconKey: "citas"     },
 ];
 
-const HIST_TIPO_COLOR = { Consulta: T.primary, Vacuna: "#10b981", Cirugía: "#f59e0b", Urgencia: "#f43f5e", Desparasitación: "#8b5cf6" };
+const HIST_TIPO_COLOR = { Consulta: T.primary, Vacuna: "#2b7c9d", Cirugía: "#f59e0b", Urgencia: "#f43f5e", Desparasitación: "#8b5cf6" };
 
 const parseDuracionDias = (dur) => {
   if (!dur) return 7;
@@ -3807,7 +3803,7 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
                                     const obj = typeof med === "string" ? { nombre: med } : med;
                                     return (
                                       <div key={i} className="inset" style={{ padding: "10px 14px", borderRadius: 12 }}>
-                                        <div style={{ fontSize: 13, fontWeight: 800, color: "#10b981", marginBottom: obj.dosis || obj.frecuencia ? 6 : 0 }}>{obj.nombre.split(" (")[0]}</div>
+                                        <div style={{ fontSize: 13, fontWeight: 800, color: "#2b7c9d", marginBottom: obj.dosis || obj.frecuencia ? 6 : 0 }}>{obj.nombre.split(" (")[0]}</div>
                                         {(obj.dosis || obj.frecuencia || obj.duracion) && (
                                           <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                                             {obj.dosis      && <span style={{ fontSize: 12, color: T.tx2, display: "inline-flex", alignItems: "center", gap: 4 }}><span style={{ display: "inline-flex" }}>{Icons.pill}</span><strong>Dosis:</strong> {obj.dosis}</span>}
@@ -3844,7 +3840,7 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
             if (diff < 0) return { label: "Vencida", color: "#f43f5e", bg: "#f43f5e18" };
             if (diff <= 7)  return { label: "Urgente", color: "#f43f5e", bg: "#f43f5e18" };
             if (diff <= 30) return { label: `En ${Math.round(diff)} días`, color: "#f59e0b", bg: "#f59e0b18" };
-            return { label: "Al día", color: "#10b981", bg: "#10b98118" };
+            return { label: "Al día", color: "#2b7c9d", bg: "#2b7c9d18" };
           };
           const vacunas = misVacunas.filter(v => v.tipo !== "desparasitacion");
           const desparasitaciones = misVacunas.filter(v => v.tipo === "desparasitacion");
@@ -4020,7 +4016,7 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
                             <div key={i} className="card" style={{ padding: "14px 18px", display: "flex", gap: 14, alignItems: "center", opacity: dado ? 0.75 : 1, transition: "opacity 0.2s" }}>
                               <div className="inset" style={{ width: 42, height: 42, borderRadius: 13, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: T.emerald }}>{Icons.pill}</div>
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: dado ? T.tx3 : "#10b981", textDecoration: dado ? "line-through" : "none" }}>{ev.nombre}</div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: dado ? T.tx3 : "#2b7c9d", textDecoration: dado ? "line-through" : "none" }}>{ev.nombre}</div>
                                 <div style={{ fontSize: 12, color: T.tx3, marginTop: 2 }}>
                                   {ev.mascotaNombre && <span>{ev.mascotaNombre} · </span>}
                                   {ev.dosis && <span>{ev.dosis} · </span>}
@@ -4038,8 +4034,8 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
                                   title={dado ? "Marcar como no administrado" : "Marcar como administrado"}
                                   style={{
                                     width: 36, height: 36, borderRadius: 10, border: "none", cursor: "pointer", flexShrink: 0,
-                                    background: dado ? `linear-gradient(135deg, ${T.emerald}, #34d399)` : T.surface,
-                                    boxShadow: dado ? `4px 4px 10px rgba(16,185,129,0.35), -4px -4px 10px #ffffff` : T.nmSm,
+                                    background: dado ? `linear-gradient(135deg, #3f8fb0, #014457)` : T.surface,
+                                    boxShadow: dado ? `4px 4px 10px rgba(1,68,87,0.35), -4px -4px 10px #ffffff` : T.nmSm,
                                     display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.25s",
                                     color: dado ? "white" : T.tx3, fontSize: 16,
                                   }}
@@ -4269,7 +4265,7 @@ const LoadingScreen = () => {
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 34, fontWeight: 800, color: "white", letterSpacing: "-0.5px", textShadow: "0 2px 16px rgba(0,0,0,0.2)" }}>Voff App</div>
           <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", fontWeight: 500, marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
-            Miau Miau
+            Miau Miau Miau
             {[0,1,2].map(i => <span key={i} style={{ animation: `dotBlink 1.4s ease ${i*0.22}s infinite`, display: "inline-block" }}>.</span>)}
           </div>
         </div>
