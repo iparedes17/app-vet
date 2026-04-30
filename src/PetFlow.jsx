@@ -226,12 +226,12 @@ const INITIAL_DB = {
 };
 
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: ${T.bg}; color: ${T.tx1}; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+body { background: ${T.bg}; color: ${T.tx1}; font-family: 'Montserrat', sans-serif; -webkit-font-smoothing: antialiased; }
 .card { background: ${T.surface}; border-radius: 24px; box-shadow: ${T.nmOut}; border: 1px solid rgba(255,255,255,0.6); transition: all 0.3s; }
 .inset { background: linear-gradient(145deg, #e4e8ed, #f4f8fc); border-radius: 18px; box-shadow: ${T.nmIn}; border: 1px solid rgba(0,0,0,0.04); }
-.btn, .btn-primary, .btn-success, .btn-danger { border-radius: 20px; border: 1px solid rgba(255,255,255,0.5); cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; padding: 12px 28px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.25s ease; white-space: nowrap; }
+.btn, .btn-primary, .btn-success, .btn-danger { border-radius: 20px; border: 1px solid rgba(255,255,255,0.5); cursor: pointer; font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 600; padding: 12px 28px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.25s ease; white-space: nowrap; }
 .btn, .btn-primary, .btn-success, .btn-danger { user-select: none; }
 .btn { background: ${T.surface}; box-shadow: ${T.nmSm}; color: ${T.tx2}; }
 .btn:hover { box-shadow: ${T.nmHover}; color: ${T.tx1}; transform: translateY(-2px); }
@@ -246,7 +246,7 @@ body { background: ${T.bg}; color: ${T.tx1}; font-family: 'Inter', sans-serif; -
 .btn-danger { background: linear-gradient(135deg, ${T.rose}, ${T.roseDark}); color: white; box-shadow: 6px 6px 16px rgba(244,63,94,0.4), -6px -6px 16px #ffffff; font-weight: 700; }
 .btn-danger:hover { box-shadow: 10px 10px 24px rgba(244,63,94,0.5), -10px -10px 24px #ffffff; color: white; transform: translateY(-2px); }
 .btn-danger:active { box-shadow: inset 4px 4px 10px rgba(150,15,35,0.45), inset -4px -4px 10px rgba(255,255,255,0.2); transform: translateY(0); }
-.input { background: linear-gradient(145deg, #e4e8ed, #f4f8fc); box-shadow: ${T.nmIn}; border: 1px solid rgba(0,0,0,0.04); border-radius: 16px; color: ${T.tx1}; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500; padding: 14px 18px; width: 100%; outline: none; transition: all 0.3s; }
+.input { background: linear-gradient(145deg, #e4e8ed, #f4f8fc); box-shadow: ${T.nmIn}; border: 1px solid rgba(0,0,0,0.04); border-radius: 16px; color: ${T.tx1}; font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 500; padding: 14px 18px; width: 100%; outline: none; transition: all 0.3s; }
 .input:focus { border-color: rgba(63,143,176,0.3); box-shadow: ${T.nmIn}, 0 0 0 4px rgba(63,143,176,0.12); background: #ffffff; }
 .input::placeholder { color: ${T.tx3}; }
 select.input { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 9L1 4h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px; }
@@ -1856,7 +1856,7 @@ const PanelSuperAdmin = ({ onLogout, db, setDb }) => {
           </div>
           {(isMobile || !collapsed) && (
             <div style={{ whiteSpace: "nowrap" }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: T.tx1, letterSpacing: "-0.3px" }}>Voff App</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "#2b7c9d", letterSpacing: "-0.3px" }}>Voff App</div>
               <div style={{ fontSize: 11, color: T.tx3, fontWeight: 500, marginTop: 1 }}>Admin Panel</div>
             </div>
           )}
@@ -2309,7 +2309,7 @@ const Login = ({ onLogin, db }) => {
               <LogoImg size={160} />
             </div>
           </div>
-          <h1 style={{ fontSize: 32, fontWeight: 800, color: T.tx1 }}>Voff App</h1>
+          <h1 style={{ fontSize: 32, fontWeight: 800, color: "#2b7c9d" }}>Voff App</h1>
         </div>
 
         {/* Formulario */}
@@ -4204,12 +4204,92 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
   );
 };
 
+const PawPrint = ({ color = "currentColor", size = 100 }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" fill={color}>
+    <ellipse cx="50" cy="70" rx="24" ry="20" />
+    <ellipse cx="22" cy="46" rx="11" ry="14" transform="rotate(-15 22 46)" />
+    <ellipse cx="40" cy="36" rx="11" ry="14" transform="rotate(-5 40 36)" />
+    <ellipse cx="60" cy="36" rx="11" ry="14" transform="rotate(5 60 36)" />
+    <ellipse cx="78" cy="46" rx="11" ry="14" transform="rotate(15 78 46)" />
+  </svg>
+);
+
+const SPLASH_PAWS = [
+  { left: "-4%",  top: "-4%", size: 220, rot: -22, delay: 0    },
+  { left: "68%",  top: "-6%", size: 190, rot: 28,  delay: 180  },
+  { left: "35%",  top: "4%",  size: 160, rot: -8,  delay: 360  },
+  { left: "-6%",  top: "30%", size: 240, rot: 32,  delay: 540  },
+  { left: "78%",  top: "16%", size: 210, rot: -32, delay: 720  },
+  { left: "22%",  top: "24%", size: 175, rot: 14,  delay: 900  },
+  { left: "52%",  top: "34%", size: 230, rot: -18, delay: 1080 },
+  { left: "6%",   top: "56%", size: 200, rot: 38,  delay: 1260 },
+  { left: "80%",  top: "50%", size: 215, rot: -26, delay: 1440 },
+  { left: "38%",  top: "50%", size: 250, rot: 8,   delay: 1620 },
+  { left: "62%",  top: "66%", size: 185, rot: -12, delay: 1800 },
+  { left: "12%",  top: "74%", size: 225, rot: 24,  delay: 1980 },
+  { left: "44%",  top: "78%", size: 170, rot: -36, delay: 2160 },
+  { left: "74%",  top: "80%", size: 205, rot: 18,  delay: 2340 },
+];
+
+const LoadingScreen = () => {
+  const ref = useRef(null);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (ref.current) ref.current.style.animation = "loaderFadeOut 0.7s ease forwards";
+    }, 3000);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div ref={ref} style={{ position: "fixed", inset: 0, zIndex: 9999, background: "linear-gradient(135deg, #2b7c9d 0%, #1a5f7a 100%)", overflow: "hidden", fontFamily: "'Montserrat', sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+        @keyframes pawPop {
+          0%   { opacity: 0; transform: scale(0) rotate(var(--r)); }
+          65%  { opacity: 0.32; transform: scale(1.18) rotate(var(--r)); }
+          100% { opacity: 0.22; transform: scale(1) rotate(var(--r)); }
+        }
+        @keyframes loaderFadeOut { to { opacity: 0; } }
+        @keyframes logoPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+        @keyframes dotBlink { 0%,80%,100% { opacity: 0; } 40% { opacity: 1; } }
+      `}</style>
+      {SPLASH_PAWS.map((p, i) => (
+        <div key={i} style={{
+          position: "absolute", left: p.left, top: p.top,
+          width: p.size, height: p.size, opacity: 0,
+          animation: `pawPop 0.55s cubic-bezier(0.34,1.56,0.64,1) ${p.delay}ms forwards`,
+          "--r": `${p.rot}deg`,
+        }}>
+          <PawPrint color="rgba(255,255,255,0.26)" size={p.size} />
+        </div>
+      ))}
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 18, zIndex: 10 }}>
+        <div style={{ animation: "logoPulse 1.8s ease-in-out infinite" }}>
+          <PawPrint color="white" size={80} />
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 34, fontWeight: 800, color: "white", letterSpacing: "-0.5px", textShadow: "0 2px 16px rgba(0,0,0,0.2)" }}>Voff App</div>
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", fontWeight: 500, marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
+            Miau Miau
+            {[0,1,2].map(i => <span key={i} style={{ animation: `dotBlink 1.4s ease ${i*0.22}s infinite`, display: "inline-block" }}>.</span>)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function PetFlow() {
   const [auth, setAuth]     = useState(null);
   const [db, setDb]         = useState(INITIAL_DB);
   const [dbReady, setDbReady] = useState(false);
+  const [minDone, setMinDone] = useState(false);
   const syncTimer  = useRef(null);
   const fromRemote = useRef(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setMinDone(true), 3700);
+    return () => clearTimeout(t);
+  }, []);
 
   // Carga inicial + escucha cambios en tiempo real desde Firestore
   useEffect(() => {
@@ -4241,12 +4321,7 @@ export default function PetFlow() {
     syncTimer.current = setTimeout(() => setDoc(DB_REF, db).catch(() => {}), 1000);
   }, [db, dbReady]);
 
-  if (!dbReady) return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "Inter, sans-serif", color: "#6b7280", gap: 16 }}>
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3f8fb0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg>
-      <span style={{ fontSize: 15, fontWeight: 600 }}>Cargando Voff App…</span>
-    </div>
-  );
+  if (!dbReady || !minDone) return <LoadingScreen />;
 
   return (
     <>
