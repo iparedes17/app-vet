@@ -53,6 +53,8 @@ const DEFAULT_EMAIL_TEMPLATES = {
   citaCanceladaVet:  { subject: "❌ Cita cancelada — aviso al equipo",            body: "La cita de {cliente} del {fecha} a las {hora} ({motivo}) fue cancelada." },
   citaReprogramadaVet: { subject: "📅 Cita reprogramada — aviso al equipo",      body: "La cita de {cliente} fue reprogramada para el {fecha} a las {hora} ({motivo})." },
   vacunasVencidaVet: { subject: "⚠️ Dosis vencida en paciente: {mascota}",       body: "{mascota} (cliente: {cliente}) tiene la dosis de {medicamento} vencida desde el {proximaDosis}. Considera contactar al cliente." },
+  // → Sistema
+  recuperacionClave: { subject: "🔑 Código de recuperación — Voff App",          body: "Hola,\n\nRecibimos una solicitud para restablecer la contraseña de tu cuenta en Voff App.\n\nTu código de verificación es:\n\n   {codigo}\n\nEste código es válido por 15 minutos.\nSi no solicitaste este cambio, ignora este mensaje.\n\n— Voff App" },
 };
 
 const EMAIL_TEMPLATE_META = [
@@ -73,6 +75,8 @@ const EMAIL_TEMPLATE_META = [
   { key: "citaCanceladaVet",    label: "Cita cancelada (aviso equipo)",    vars: "{cliente}  {fecha}  {hora}  {motivo}",  dest: "Veterinaria" },
   { key: "citaReprogramadaVet", label: "Cita reprogramada (aviso equipo)", vars: "{cliente}  {fecha}  {hora}  {motivo}",  dest: "Veterinaria" },
   { key: "vacunasVencidaVet",label: "Vacuna vencida (aviso equipo)", vars: "{mascota}  {cliente}  {medicamento}  {proximaDosis}", dest: "Veterinaria" },
+  // Sistema
+  { key: "recuperacionClave", label: "Recuperación de contraseña",  vars: "{codigo}",                                              dest: "Sistema"     },
 ];
 
 const NOTIF_TYPES = [
@@ -217,6 +221,7 @@ const INITIAL_DB = {
     notif_002: { id: "notif_002", titulo: "Cliente registrado", mensaje: "María González fue registrada en Veterinaria San Francisco.", leida: false, fecha: "2026-04-27", tipo: "general", empresaId: "emp_001" },
     notif_003: { id: "notif_003", titulo: "Vacuna pendiente", mensaje: "Mishi tiene una vacuna de refuerzo pendiente este mes.", leida: false, fecha: "2026-04-26", tipo: "vacuna", empresaId: "emp_001" },
   },
+  facturacion: {},
   medAdministrados: {},
   vacunas: {
     vac_001: { id: "vac_001", mascotaId: "masc_001", clienteId: "cli_001", empresaId: "emp_001", nombre: "Triple felina (Gatos)", tipo: "vacuna", fecha: "2026-01-15", proximaDosis: "2027-01-15", veterinario: "Dr. Pérez", lote: "TF-2026-01", notas: "" },
@@ -979,19 +984,21 @@ const Icons = {
   alert:    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
   check:    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>,
   box:      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>,
-  clock:    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  clock:       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  facturacion: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M7 15h2M12 15h5"/></svg>,
 };
 
 const MENU = [
-  { id: "inicio",       label: "Inicio",         iconKey: "inicio"    },
-  { id: "empresas",     label: "Empresas",        iconKey: "empresas"  },
-  { id: "sedes",        label: "Sedes",           iconKey: "sedes"     },
-  { id: "admins",       label: "Usuarios Admin",  iconKey: "admins"    },
-  { id: "clientes",     label: "Clientes",        iconKey: "clientes"  },
-  { id: "mascotas",     label: "Mascotas",        iconKey: "mascotas"  },
-  { id: "reportes",     label: "Reportes",        iconKey: "reportes"  },
-  { id: "superadmins",  label: "Super Admins",    iconKey: "admins"    },
-  { id: "ajustes",      label: "Ajustes",         iconKey: "ajustes"   },
+  { id: "inicio",       label: "Inicio",         iconKey: "inicio"       },
+  { id: "facturacion",  label: "Facturación",    iconKey: "facturacion"  },
+  { id: "empresas",     label: "Empresas",        iconKey: "empresas"    },
+  { id: "sedes",        label: "Sedes",           iconKey: "sedes"       },
+  { id: "admins",       label: "Usuarios Admin",  iconKey: "admins"      },
+  { id: "clientes",     label: "Clientes",        iconKey: "clientes"    },
+  { id: "mascotas",     label: "Mascotas",        iconKey: "mascotas"    },
+  { id: "reportes",     label: "Reportes",        iconKey: "reportes"    },
+  { id: "superadmins",  label: "Super Admins",    iconKey: "admins"      },
+  { id: "ajustes",      label: "Ajustes",         iconKey: "ajustes"     },
 ];
 
 const MetricCard = ({ icon, value, label, color, sub }) => (
@@ -1017,8 +1024,7 @@ const TabInicio = ({ db, perfil }) => {
   return (
     <div>
       {/* Bienvenida */}
-      <div className="card" style={{ padding: "22px 28px", marginBottom: 28, display: "flex", alignItems: "center", gap: 18 }}>
-        <div className="inset" style={{ width: 52, height: 52, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><LogoImg size={75} /></div>
+      <div className="card" style={{ padding: "22px 28px", marginBottom: 28 }}>
         <div>
           <h2 style={{ fontSize: 20, fontWeight: 800, color: T.tx1 }}>Bienvenido, {perfil.nombre} {perfil.apellido}</h2>
           <p style={{ fontSize: 13, color: T.tx3, marginTop: 3 }}>
@@ -1103,6 +1109,9 @@ const TabMascotas = ({ db, onNueva, onEditar, onEliminar }) => {
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [carnetId, setCarnetId] = useState(null);
+  const [collapsedMasc, setCollapsedMasc] = useState({});
+  const isMascCollapsed = (empId) => collapsedMasc[empId] ?? true;
+  const toggleMascEmpresa = (empId) => setCollapsedMasc(p => ({ ...p, [empId]: !(p[empId] ?? true) }));
   const q = search.toLowerCase();
   const mascotasList = Object.values(db.mascotas || {}).filter(m =>
     !q || m.nombre.toLowerCase().includes(q) || (m.especie || "").toLowerCase().includes(q) || (m.raza || "").toLowerCase().includes(q)
@@ -1132,14 +1141,20 @@ const TabMascotas = ({ db, onNueva, onEditar, onEliminar }) => {
         <div className="card" style={{ padding: 40, textAlign: "center" }}><p style={{ color: T.tx3 }}>Primero debes registrar clientes para poder agregar mascotas</p></div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          {byEmpresa.map(({ emp, byCliente, total }) => total === 0 ? null : (
+          {byEmpresa.map(({ emp, byCliente, total }) => {
+            if (total === 0) return null;
+            const mascCol = isMascCollapsed(emp.id);
+            return (
             <div key={emp.id} className="card" style={{ padding: 20 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, paddingBottom: 12, borderBottom: "1px solid rgba(197,205,216,0.35)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: mascCol ? 0 : 16, paddingBottom: mascCol ? 0 : 12, borderBottom: mascCol ? "none" : "1px solid rgba(197,205,216,0.35)" }}>
                 <div style={{ width: 32, height: 32, borderRadius: 10, background: `linear-gradient(135deg, ${T.primary}, ${T.primaryLight})`, display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0 }}>{Icons.empresas}</div>
                 <span style={{ fontSize: 15, fontWeight: 800, color: T.tx1 }}>{emp.nombre}</span>
                 <span className="badge badge-primary" style={{ marginLeft: "auto" }}>{total} mascota{total !== 1 ? "s" : ""}</span>
+                <button onClick={() => toggleMascEmpresa(emp.id)} style={{ width: 34, height: 34, borderRadius: 10, border: "none", cursor: "pointer", background: T.bg, boxShadow: !mascCol ? "inset 3px 3px 7px #c5cdd8, inset -3px -3px 7px #ffffff" : "4px 4px 10px #c5cdd8, -4px -4px 10px #ffffff", display: "flex", alignItems: "center", justifyContent: "center", color: T.tx2, transition: "all 0.25s", flexShrink: 0 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: mascCol ? "rotate(0deg)" : "rotate(180deg)", transition: "transform 0.25s" }}><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
               </div>
-              {byCliente.map(({ cli, mascotas }) => (
+              {!mascCol && byCliente.map(({ cli, mascotas }) => (
                 <div key={cli.id} style={{ marginBottom: 16 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, paddingLeft: 4 }}>
                     <span style={{ color: T.primary }}>{Icons.clientes}</span>
@@ -1149,7 +1164,6 @@ const TabMascotas = ({ db, onNueva, onEditar, onEliminar }) => {
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
                     {mascotas.map(m => (
                       <div key={m.id} className="inset" style={{ borderRadius: 18, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14, minWidth: 260, flex: "0 1 auto" }}>
-                        {/* Mini foto */}
                         <div style={{ width: 52, height: 52, borderRadius: "50%", overflow: "hidden", flexShrink: 0, background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, boxShadow: "3px 3px 8px #c5cdd8, -3px -3px 8px #ffffff" }}>
                           {m.foto ? <img src={m.foto} alt={m.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ color: T.primary, display: "flex" }}>{m.especie === "Gato" ? Icons.cat : m.especie === "Perro" ? Icons.dog : m.especie === "Ave" ? Icons.bird : Icons.mascotas}</span>}
                         </div>
@@ -1171,7 +1185,8 @@ const TabMascotas = ({ db, onNueva, onEditar, onEliminar }) => {
                 </div>
               ))}
             </div>
-          ))}
+            );
+          })}
           {mascotasList.length === 0 && (
             <div className="card" style={{ padding: 40, textAlign: "center" }}>
               <p style={{ color: T.tx3 }}>{q ? "Sin mascotas que coincidan con la búsqueda" : "No hay mascotas registradas aún"}</p>
@@ -1193,6 +1208,260 @@ const TabMascotas = ({ db, onNueva, onEditar, onEliminar }) => {
   );
 };
 
+const PLANES = ["Mensual", "Trimestral", "Semestral", "Anual"];
+
+const ModalConfigFacturacion = ({ emp, f, onSave, onClose }) => {
+  const [form, setForm] = useState({ plan: f.plan || "Mensual", monto: f.monto || 0, diaPago: f.diaPago || 1 });
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="card modal-inner" style={{ width: "100%", maxWidth: 420, padding: 32 }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <div>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: T.tx1 }}>Configurar facturación</h2>
+            <p style={{ fontSize: 12, color: T.tx3, marginTop: 3 }}>{emp.nombre}</p>
+          </div>
+          <button className="btn" onClick={onClose}>✕</button>
+        </div>
+        <div style={{ display: "grid", gap: 16, marginBottom: 24 }}>
+          <div>
+            <label style={LBL}>PLAN</label>
+            <select className="input" value={form.plan} onChange={e => setForm(p => ({ ...p, plan: e.target.value }))}>
+              {PLANES.map(pl => <option key={pl}>{pl}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={LBL}>MONTO (COP)</label>
+            <input className="input" type="number" min="0" value={form.monto} onChange={e => setForm(p => ({ ...p, monto: Number(e.target.value) }))} placeholder="0" />
+          </div>
+          <div>
+            <label style={LBL}>DÍA DE PAGO DEL MES</label>
+            <input className="input" type="number" min="1" max="31" value={form.diaPago} onChange={e => setForm(p => ({ ...p, diaPago: Number(e.target.value) }))} placeholder="1" />
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button className="btn-primary" style={{ flex: 1, height: 46 }} onClick={() => onSave(form)}>Guardar</button>
+          <button className="btn" onClick={onClose}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ModalRegistrarPago = ({ emp, f, onSave, onClose }) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const [form, setForm] = useState({ fecha: today, monto: f.monto || 0, estado: "pagado", notas: "" });
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="card modal-inner" style={{ width: "100%", maxWidth: 420, padding: 32 }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <div>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: T.tx1 }}>Registrar pago</h2>
+            <p style={{ fontSize: 12, color: T.tx3, marginTop: 3 }}>{emp.nombre}</p>
+          </div>
+          <button className="btn" onClick={onClose}>✕</button>
+        </div>
+        <div style={{ display: "grid", gap: 16, marginBottom: 24 }}>
+          <div>
+            <label style={LBL}>FECHA</label>
+            <input className="input" type="date" value={form.fecha} onChange={e => setForm(p => ({ ...p, fecha: e.target.value }))} />
+          </div>
+          <div>
+            <label style={LBL}>MONTO (COP)</label>
+            <input className="input" type="number" min="0" value={form.monto} onChange={e => setForm(p => ({ ...p, monto: Number(e.target.value) }))} />
+          </div>
+          <div>
+            <label style={LBL}>ESTADO</label>
+            <select className="input" value={form.estado} onChange={e => setForm(p => ({ ...p, estado: e.target.value }))}>
+              {ESTADOS_PAGO.map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={LBL}>NOTAS</label>
+            <input className="input" value={form.notas} onChange={e => setForm(p => ({ ...p, notas: e.target.value }))} placeholder="Transferencia, efectivo, observaciones..." />
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button className="btn-primary" style={{ flex: 1, height: 46 }} onClick={() => onSave(form)}>Registrar</button>
+          <button className="btn" onClick={onClose}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+const ESTADOS_PAGO = [
+  { id: "pagado",   label: "Pagado",   color: "#16a34a" },
+  { id: "pendiente",label: "Pendiente",color: "#ca8a04" },
+  { id: "vencido",  label: "Vencido",  color: "#dc2626" },
+];
+
+const fmtCOP = (n) => n ? `$${Number(n).toLocaleString("es-CO")}` : "$0";
+
+const TabFacturacion = ({ db, setDb }) => {
+  const empresas = Object.values(db.empresas || {});
+  const facturacion = db.facturacion || {};
+  const [modalConfig, setModalConfig] = useState(null);
+  const [modalPago, setModalPago] = useState(null);
+  const [collapsedHist, setCollapsedHist] = useState({});
+
+  const getF = (empId) => facturacion[empId] || { empresaId: empId, activa: true, plan: "Mensual", monto: 0, diaPago: 1, pagos: [] };
+
+  const saveF = (empId, patch) => setDb(prev => ({
+    ...prev,
+    facturacion: { ...(prev.facturacion || {}), [empId]: { ...getF(empId), ...patch } }
+  }));
+
+  const toggleActiva = (empId) => {
+    const f = getF(empId);
+    if (!f.activa || confirm(`¿Activar empresa "${db.empresas[empId]?.nombre}"? Sus usuarios podrán ingresar.`) || confirm(`¿Desactivar empresa "${db.empresas[empId]?.nombre}"? Sus usuarios NO podrán ingresar.`)) {
+      saveF(empId, { activa: !f.activa });
+    }
+  };
+
+  const deletePago = (empId, pagoId) => {
+    if (!confirm("¿Eliminar este registro?")) return;
+    const f = getF(empId);
+    saveF(empId, { pagos: (f.pagos || []).filter(p => p.id !== pagoId) });
+  };
+
+  const mesActual = new Date().toISOString().slice(0, 7);
+  const totalActivas    = empresas.filter(e => getF(e.id).activa !== false).length;
+  const ingresosMes     = empresas.flatMap(e => (getF(e.id).pagos || []).filter(p => p.fecha?.startsWith(mesActual) && p.estado === "pagado")).reduce((s, p) => s + Number(p.monto || 0), 0);
+  const ingresosTotal   = empresas.flatMap(e => (getF(e.id).pagos || []).filter(p => p.estado === "pagado")).reduce((s, p) => s + Number(p.monto || 0), 0);
+  const pendientes      = empresas.filter(e => { const f = getF(e.id); return f.activa !== false && !(f.pagos || []).some(p => p.fecha?.startsWith(mesActual) && p.estado === "pagado"); }).length;
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <h2 style={{ fontSize: 24, fontWeight: 700, color: T.tx1 }}>Facturación</h2>
+      </div>
+
+      {/* Métricas resumen */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14, marginBottom: 28 }}>
+        {[
+          { label: "Empresas activas",     value: `${totalActivas} / ${empresas.length}`, color: T.primary },
+          { label: "Ingresos este mes",     value: fmtCOP(ingresosMes),    color: "#16a34a" },
+          { label: "Ingresos acumulados",   value: fmtCOP(ingresosTotal),  color: T.primary },
+          { label: "Pendientes este mes",   value: pendientes,             color: pendientes > 0 ? "#ca8a04" : "#16a34a" },
+        ].map(m => (
+          <div key={m.label} className="card" style={{ padding: "18px 20px" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.tx3, textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 8 }}>{m.label}</div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: m.color, lineHeight: 1 }}>{m.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Lista de empresas */}
+      {empresas.length === 0 ? (
+        <div className="card" style={{ padding: 40, textAlign: "center" }}><p style={{ color: T.tx3 }}>No hay empresas registradas</p></div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {empresas.map(emp => {
+            const f = getF(emp.id);
+            const activa = f.activa !== false;
+            const pagos = (f.pagos || []).slice().sort((a, b) => b.fecha > a.fecha ? 1 : -1);
+            const ultimoPago = pagos[0];
+            const pagadoEsteMes = pagos.some(p => p.fecha?.startsWith(mesActual) && p.estado === "pagado");
+            const estadoBadge = !activa ? { label: "Inactiva", color: "#dc2626" } : pagadoEsteMes ? { label: "Al día", color: "#16a34a" } : { label: "Pendiente pago", color: "#ca8a04" };
+            const histCol = collapsedHist[emp.id] ?? true;
+            return (
+              <div key={emp.id} className="card" style={{ padding: 22, opacity: activa ? 1 : 0.75 }}>
+                {/* Header empresa */}
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, paddingBottom: 14, borderBottom: "1px solid rgba(197,205,216,0.35)" }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: activa ? `linear-gradient(135deg, ${T.primary}, #014457)` : "#b0b8c4", display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0 }}>{Icons.empresas}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: T.tx1 }}>{emp.nombre}</div>
+                    <div style={{ fontSize: 11, color: T.tx3 }}>NIT: {emp.nit}</div>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 800, padding: "4px 10px", borderRadius: 20, background: estadoBadge.color + "18", color: estadoBadge.color, border: `1px solid ${estadoBadge.color}40`, flexShrink: 0 }}>{estadoBadge.label}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: activa ? T.primary : T.tx3 }}>{activa ? "Activa" : "Inactiva"}</span>
+                    <Toggle checked={activa} onChange={() => {
+                      if (confirm(activa ? `¿Desactivar "${emp.nombre}"? Sus usuarios no podrán ingresar.` : `¿Activar "${emp.nombre}"?`)) saveF(emp.id, { activa: !activa });
+                    }} />
+                  </div>
+                </div>
+
+                {/* Info facturación */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, marginBottom: 14 }}>
+                  {[
+                    { label: "Plan",         value: f.plan || "—" },
+                    { label: "Monto",         value: fmtCOP(f.monto) },
+                    { label: "Día de pago",   value: f.diaPago ? `Día ${f.diaPago}` : "—" },
+                    { label: "Último pago",   value: ultimoPago ? ultimoPago.fecha : "Sin registros" },
+                  ].map(inf => (
+                    <div key={inf.label} className="inset" style={{ padding: "10px 14px", borderRadius: 12 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: T.tx3, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 4 }}>{inf.label}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: T.tx1 }}>{inf.value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Acciones */}
+                <div style={{ display: "flex", gap: 8, marginBottom: pagos.length > 0 ? 14 : 0 }}>
+                  <button className="btn" onClick={() => setModalConfig({ emp, f })} style={{ fontSize: 13 }}>Configurar</button>
+                  <button className="btn-primary" onClick={() => setModalPago({ emp, f })} style={{ fontSize: 13 }}>+ Registrar pago</button>
+                  {pagos.length > 0 && (
+                    <button onClick={() => setCollapsedHist(p => ({ ...p, [emp.id]: !histCol }))} style={{ marginLeft: "auto", width: 34, height: 34, borderRadius: 10, border: "none", cursor: "pointer", background: T.bg, boxShadow: !histCol ? "inset 3px 3px 7px #c5cdd8, inset -3px -3px 7px #ffffff" : "4px 4px 10px #c5cdd8, -4px -4px 10px #ffffff", display: "flex", alignItems: "center", justifyContent: "center", color: T.tx2, transition: "all 0.25s", flexShrink: 0 }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: histCol ? "rotate(0deg)" : "rotate(180deg)", transition: "transform 0.25s" }}><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                  )}
+                </div>
+
+                {/* Historial de pagos */}
+                {!histCol && pagos.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: T.tx3, textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 8, paddingLeft: 2 }}>Historial de pagos</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {pagos.map(p => {
+                        const est = ESTADOS_PAGO.find(e => e.id === p.estado) || ESTADOS_PAGO[0];
+                        return (
+                          <div key={p.id} className="inset" style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", borderRadius: 12 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                              <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 8px", borderRadius: 8, background: est.color + "18", color: est.color, border: `1px solid ${est.color}40` }}>{est.label}</span>
+                              <div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: T.tx1 }}>{fmtCOP(p.monto)}</div>
+                                <div style={{ fontSize: 11, color: T.tx3 }}>{p.fecha}{p.notas && ` · ${p.notas}`}</div>
+                              </div>
+                            </div>
+                            <button onClick={() => deletePago(emp.id, p.id)} style={{ background: "none", border: "none", cursor: "pointer", color: T.tx3, fontSize: 14, padding: "2px 6px", borderRadius: 6 }}>✕</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {modalConfig && (
+        <ModalConfigFacturacion
+          emp={modalConfig.emp}
+          f={modalConfig.f}
+          onSave={(form) => { saveF(modalConfig.emp.id, form); setModalConfig(null); alert("✓ Configuración guardada"); }}
+          onClose={() => setModalConfig(null)}
+        />
+      )}
+
+      {modalPago && (
+        <ModalRegistrarPago
+          emp={modalPago.emp}
+          f={modalPago.f}
+          onSave={(form) => {
+            const f = getF(modalPago.emp.id);
+            saveF(modalPago.emp.id, { pagos: [...(f.pagos || []), { ...form, id: `pago_${Date.now()}` }] });
+            setModalPago(null);
+            alert("✓ Pago registrado");
+          }}
+          onClose={() => setModalPago(null)}
+        />
+      )}
+    </div>
+  );
+};
+
 const REPORTS_LIST = [
   { id: "clientes",   nombre: "Reporte de Clientes",   descripcion: "Listado completo de clientes registrados, datos de contacto, empresa asociada e historial de mascotas.", iconKey: "clientes"  },
   { id: "citas",      nombre: "Reporte de Citas",       descripcion: "Historial de citas agendadas, completadas y canceladas. Incluye estadísticas de asistencia por sede.",   iconKey: "citas"     },
@@ -1201,21 +1470,29 @@ const REPORTS_LIST = [
 
 const TabReportes = ({ db, reportes, toggleReporte }) => {
   const empresasList = Object.values(db.empresas);
+  const [collapsed, setCollapsed] = useState({});
+  const isCol = (id) => collapsed[id] ?? true;
+  const toggle = (id) => setCollapsed(p => ({ ...p, [id]: !(p[id] ?? true) }));
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      {REPORTS_LIST.map(rep => (
+      {REPORTS_LIST.map(rep => {
+        const col = isCol(rep.id);
+        return (
         <div key={rep.id} className="card" style={{ padding: 28 }}>
           {/* Header del reporte */}
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 16, marginBottom: 24 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 16, marginBottom: col ? 0 : 24 }}>
             <div className="inset" style={{ width: 48, height: 48, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: T.primary }}>{Icons[rep.iconKey]}</div>
-            <div>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <h3 style={{ fontSize: 17, fontWeight: 800, color: T.tx1, marginBottom: 4 }}>{rep.nombre}</h3>
               <p style={{ fontSize: 13, color: T.tx3, lineHeight: 1.5 }}>{rep.descripcion}</p>
             </div>
+            <button onClick={() => toggle(rep.id)} style={{ width: 34, height: 34, borderRadius: 10, border: "none", cursor: "pointer", background: T.bg, boxShadow: !col ? "inset 3px 3px 7px #c5cdd8, inset -3px -3px 7px #ffffff" : "4px 4px 10px #c5cdd8, -4px -4px 10px #ffffff", display: "flex", alignItems: "center", justifyContent: "center", color: T.tx2, transition: "all 0.25s", flexShrink: 0, marginTop: 7 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: col ? "rotate(0deg)" : "rotate(180deg)", transition: "transform 0.25s" }}><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
           </div>
 
           {/* Toggles por empresa */}
-          {empresasList.length === 0 ? (
+          {!col && (empresasList.length === 0 ? (
             <div className="inset" style={{ padding: 20, textAlign: "center" }}>
               <p style={{ color: T.tx3, fontSize: 13 }}>No hay empresas registradas aún</p>
             </div>
@@ -1242,9 +1519,10 @@ const TabReportes = ({ db, reportes, toggleReporte }) => {
                 );
               })}
             </div>
-          )}
+          ))}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
@@ -1566,9 +1844,9 @@ const TabAjustes = ({ ajustes, onSave }) => {
         </div>
         {showPlantillas && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 18 }}>
-            {["Veterinaria", "Cliente"].map(dest => (
+            {["Sistema", "Veterinaria", "Cliente"].map(dest => (
               <div key={dest}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: T.tx3, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6, marginTop: dest === "Cliente" ? 12 : 0 }}>→ Se envía al: {dest}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.tx3, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6, marginTop: dest === "Cliente" ? 12 : 0 }}>{dest === "Sistema" ? "⚙ Sistema" : `→ Se envía al: ${dest}`}</div>
                 {EMAIL_TEMPLATE_META.filter(t => t.dest === dest).map(meta => {
                   const open = expandedTpl === meta.key;
                   return (
@@ -1755,6 +2033,9 @@ const PanelSuperAdmin = ({ onLogout, db, setDb }) => {
   const [showSearch, setShowSearch] = useState({ empresas: false, sedes: false, admins: false, clientes: false, superadmins: false });
   const toggleSearch = (key) => setShowSearch(p => ({ ...p, [key]: !p[key] }));
   const setQ = (key, val) => setSearch(p => ({ ...p, [key]: val }));
+  const [collapsedEmpresas, setCollapsedEmpresas] = useState({});
+  const isEmpresaCollapsed = (section, empId) => collapsedEmpresas[`${section}_${empId}`] ?? true;
+  const toggleEmpresaSection = (section, empId) => setCollapsedEmpresas(p => ({ ...p, [`${section}_${empId}`]: !(p[`${section}_${empId}`] ?? true) }));
 
   const saveSuperAdmin = (form) => {
     const id = form.id || `sa_${Date.now()}`;
@@ -1957,6 +2238,8 @@ const PanelSuperAdmin = ({ onLogout, db, setDb }) => {
 
       {tab === "inicio" && <TabInicio db={db} perfil={perfil} />}
 
+      {tab === "facturacion" && <TabFacturacion db={db} setDb={setDb} />}
+
       {tab === "mascotas" && <TabMascotas db={db} onNueva={() => setModalMascota({})} onEditar={m => setModalMascota(m)} onEliminar={deleteMascota} />}
 
       {tab === "reportes" && <TabReportes db={db} reportes={reportes} toggleReporte={toggleReporte} />}
@@ -1982,11 +2265,22 @@ const PanelSuperAdmin = ({ onLogout, db, setDb }) => {
               {lista.map(emp => {
                 const nc = emp.notificaciones || {};
                 const nActivas = NOTIF_TYPES.filter(t => nc[t.key]).length;
+                const empActiva = (db.facturacion?.[emp.id]?.activa) !== false;
                 return (
-                  <div key={emp.id} className="card" style={{ padding: 24 }}>
-                    <div style={{ marginBottom: 12 }}>
-                      <h3 style={{ fontSize: 18, fontWeight: 700, color: T.tx1, marginBottom: 4 }}>{emp.nombre}</h3>
-                      <span className="badge badge-primary">NIT: {emp.nit}</span>
+                  <div key={emp.id} className="card" style={{ padding: 24, opacity: empActiva ? 1 : 0.8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                      <div>
+                        <h3 style={{ fontSize: 18, fontWeight: 700, color: T.tx1, marginBottom: 4 }}>{emp.nombre}</h3>
+                        <span className="badge badge-primary">NIT: {emp.nit}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: empActiva ? T.primary : T.rose }}>{empActiva ? "Activa" : "Inactiva"}</span>
+                        <Toggle checked={empActiva} onChange={() => {
+                          if (confirm(empActiva ? `¿Desactivar "${emp.nombre}"? Sus usuarios no podrán ingresar.` : `¿Activar "${emp.nombre}"?`)) {
+                            setDb(prev => ({ ...prev, facturacion: { ...(prev.facturacion || {}), [emp.id]: { ...(prev.facturacion?.[emp.id] || { empresaId: emp.id, plan: "Mensual", monto: 0, diaPago: 1, pagos: [] }), activa: !empActiva } } }));
+                          }
+                        }} />
+                      </div>
                     </div>
                     <div className="inset" style={{ padding: 14, marginBottom: 14 }}>
                       <div style={{ fontSize: 13, color: T.tx2, lineHeight: 1.8 }}>
@@ -2036,14 +2330,19 @@ const PanelSuperAdmin = ({ onLogout, db, setDb }) => {
               <div className="card" style={{ padding: 40, textAlign: "center" }}><p style={{ color: T.tx3 }}>Primero debes crear al menos una empresa</p></div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                {byEmpresa.map(({ emp, sedes }) => (
+                {byEmpresa.map(({ emp, sedes }) => {
+                  const sedesCol = isEmpresaCollapsed("sedes", emp.id);
+                  return (
                   <div key={emp.id} className="card" style={{ padding: 20 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, paddingBottom: 12, borderBottom: "1px solid rgba(197,205,216,0.35)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: sedesCol ? 0 : 14, paddingBottom: sedesCol ? 0 : 12, borderBottom: sedesCol ? "none" : "1px solid rgba(197,205,216,0.35)" }}>
                       <div style={{ width: 32, height: 32, borderRadius: 10, background: `linear-gradient(135deg, ${T.primary}, ${T.primaryLight})`, display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0 }}>{Icons.empresas}</div>
                       <span style={{ fontSize: 15, fontWeight: 800, color: T.tx1 }}>{emp.nombre}</span>
                       <span className="badge badge-primary" style={{ marginLeft: "auto" }}>{sedes.length} sede{sedes.length !== 1 ? "s" : ""}</span>
+                      <button onClick={() => toggleEmpresaSection("sedes", emp.id)} style={{ width: 34, height: 34, borderRadius: 10, border: "none", cursor: "pointer", background: T.bg, boxShadow: !sedesCol ? "inset 3px 3px 7px #c5cdd8, inset -3px -3px 7px #ffffff" : "4px 4px 10px #c5cdd8, -4px -4px 10px #ffffff", display: "flex", alignItems: "center", justifyContent: "center", color: T.tx2, transition: "all 0.25s", flexShrink: 0 }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: sedesCol ? "rotate(0deg)" : "rotate(180deg)", transition: "transform 0.25s" }}><polyline points="6 9 12 15 18 9"/></svg>
+                      </button>
                     </div>
-                    {sedes.length === 0 ? (
+                    {!sedesCol && (sedes.length === 0 ? (
                       <p style={{ fontSize: 13, color: T.tx3, padding: "8px 4px" }}>Sin sedes{q ? " que coincidan" : " registradas"}</p>
                     ) : sedes.map(sede => (
                       <div key={sede.id} className="inset list-row" style={{ padding: "16px 18px", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -2053,9 +2352,10 @@ const PanelSuperAdmin = ({ onLogout, db, setDb }) => {
                         </div>
                         <div style={{ display: "flex", gap: 8 }}><button className="btn" onClick={() => setModalSede(sede)}>Editar</button><button className="btn-danger" onClick={() => deleteSede(sede.id)}>Eliminar</button></div>
                       </div>
-                    ))}
+                    )))}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -2091,13 +2391,18 @@ const PanelSuperAdmin = ({ onLogout, db, setDb }) => {
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                 {byEmpresa.map(({ emp, bySede, sinSede }) => {
                   const total = bySede.reduce((n, g) => n + g.admins.length, 0) + sinSede.length;
+                  const adminsCol = isEmpresaCollapsed("admins", emp.id);
                   return (
                     <div key={emp.id} className="card" style={{ padding: 20 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, paddingBottom: 12, borderBottom: "1px solid rgba(197,205,216,0.35)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: adminsCol ? 0 : 14, paddingBottom: adminsCol ? 0 : 12, borderBottom: adminsCol ? "none" : "1px solid rgba(197,205,216,0.35)" }}>
                         <div style={{ width: 32, height: 32, borderRadius: 10, background: `linear-gradient(135deg, ${T.primary}, ${T.primaryLight})`, display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0 }}>{Icons.empresas}</div>
                         <span style={{ fontSize: 15, fontWeight: 800, color: T.tx1 }}>{emp.nombre}</span>
                         <span className="badge badge-primary" style={{ marginLeft: "auto" }}>{total} admin{total !== 1 ? "s" : ""}</span>
+                        <button onClick={() => toggleEmpresaSection("admins", emp.id)} style={{ width: 34, height: 34, borderRadius: 10, border: "none", cursor: "pointer", background: T.bg, boxShadow: !adminsCol ? "inset 3px 3px 7px #c5cdd8, inset -3px -3px 7px #ffffff" : "4px 4px 10px #c5cdd8, -4px -4px 10px #ffffff", display: "flex", alignItems: "center", justifyContent: "center", color: T.tx2, transition: "all 0.25s", flexShrink: 0 }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: adminsCol ? "rotate(0deg)" : "rotate(180deg)", transition: "transform 0.25s" }}><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
                       </div>
+                      {!adminsCol && (<>
                       {bySede.map(({ sede, admins: sedAdmins }) => sedAdmins.length === 0 ? null : (
                         <div key={sede.id} style={{ marginBottom: 12 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, paddingLeft: 4 }}>
@@ -2133,6 +2438,7 @@ const PanelSuperAdmin = ({ onLogout, db, setDb }) => {
                         </div>
                       )}
                       {total === 0 && <p style={{ fontSize: 13, color: T.tx3, padding: "8px 4px" }}>Sin admins{q ? " que coincidan" : " registrados"}</p>}
+                      </>)}
                     </div>
                   );
                 })}
@@ -2210,13 +2516,18 @@ const PanelSuperAdmin = ({ onLogout, db, setDb }) => {
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                 {byEmpresa.map(({ emp, bySede, sinSede }) => {
                   const total = bySede.reduce((n, g) => n + g.clientes.length, 0) + sinSede.length;
+                  const clientesCol = isEmpresaCollapsed("clientes", emp.id);
                   return (
                     <div key={emp.id} className="card" style={{ padding: 20 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, paddingBottom: 12, borderBottom: "1px solid rgba(197,205,216,0.35)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: clientesCol ? 0 : 14, paddingBottom: clientesCol ? 0 : 12, borderBottom: clientesCol ? "none" : "1px solid rgba(197,205,216,0.35)" }}>
                         <div style={{ width: 32, height: 32, borderRadius: 10, background: `linear-gradient(135deg, ${T.primary}, ${T.primaryLight})`, display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0 }}>{Icons.empresas}</div>
                         <span style={{ fontSize: 15, fontWeight: 800, color: T.tx1 }}>{emp.nombre}</span>
                         <span className="badge badge-success" style={{ marginLeft: "auto" }}>{total} cliente{total !== 1 ? "s" : ""}</span>
+                        <button onClick={() => toggleEmpresaSection("clientes", emp.id)} style={{ width: 34, height: 34, borderRadius: 10, border: "none", cursor: "pointer", background: T.bg, boxShadow: !clientesCol ? "inset 3px 3px 7px #c5cdd8, inset -3px -3px 7px #ffffff" : "4px 4px 10px #c5cdd8, -4px -4px 10px #ffffff", display: "flex", alignItems: "center", justifyContent: "center", color: T.tx2, transition: "all 0.25s", flexShrink: 0 }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: clientesCol ? "rotate(0deg)" : "rotate(180deg)", transition: "transform 0.25s" }}><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
                       </div>
+                      {!clientesCol && (<>
                       {bySede.map(({ sede, clientes: sedCli }) => sedCli.length === 0 ? null : (
                         <div key={sede.id} style={{ marginBottom: 12 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, paddingLeft: 4 }}>
@@ -2252,6 +2563,7 @@ const PanelSuperAdmin = ({ onLogout, db, setDb }) => {
                         </div>
                       )}
                       {total === 0 && <p style={{ fontSize: 13, color: T.tx3, padding: "8px 4px" }}>Sin clientes{q ? " que coincidan" : " registrados"}</p>}
+                      </>)}
                     </div>
                   );
                 })}
@@ -2277,19 +2589,155 @@ const PanelSuperAdmin = ({ onLogout, db, setDb }) => {
   );
 };
 
-const Login = ({ onLogin, db }) => {
-  const [email, setEmail]       = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError]       = useState("");
+const ModalOlvideClave = ({ db, setDb, onClose }) => {
+  const [step, setStep]             = useState(1);
+  const [inputEmail, setInputEmail] = useState("");
+  const [code, setCode]             = useState("");
+  const [genCode, setGenCode]       = useState("");
+  const [newPass, setNewPass]       = useState("");
+  const [confirm, setConfirm]       = useState("");
+  const [target, setTarget]         = useState(null);
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState("");
+  const [info, setInfo]             = useState("");
+
+  const findUser = (em) => {
+    const sa = Object.values(db.users || {}).find(u => u.email?.toLowerCase() === em);
+    if (sa) return { col: "users", id: sa.id };
+    const admin = Object.values(db.adminUsers || {}).find(u => u.email?.toLowerCase() === em);
+    if (admin) return { col: "adminUsers", id: admin.id };
+    const cli = Object.values(db.clientes || {}).find(u => u.email?.toLowerCase() === em);
+    if (cli) return { col: "clientes", id: cli.id };
+    return null;
+  };
+
+  const handleSendCode = async () => {
+    const em = inputEmail.trim().toLowerCase();
+    if (!em) { setError("Ingresa tu correo electrónico"); return; }
+    const found = findUser(em);
+    if (!found) { setError("No existe ninguna cuenta registrada con ese correo"); return; }
+    setLoading(true);
+    setError("");
+    const c = String(Math.floor(100000 + Math.random() * 900000));
+    setGenCode(c);
+    setTarget(found);
+    const cfg = db.ajustes?.email;
+    if (cfg?.serviceId && cfg?.templateId && cfg?.publicKey) {
+      await sendEmailTpl(cfg, em, "recuperacionClave", { codigo: c });
+      setInfo(`Se envió un código de 6 dígitos a ${em}`);
+    } else {
+      setInfo(`Código de verificación: ${c}  (EmailJS no configurado — solo visible en desarrollo)`);
+    }
+    setLoading(false);
+    setStep(2);
+  };
+
+  const handleReset = () => {
+    if (code.trim() !== genCode) { setError("Código incorrecto. Revisa el correo enviado"); return; }
+    if (!newPass || !confirm)    { setError("Completa todos los campos"); return; }
+    if (newPass !== confirm)     { setError("Las contraseñas no coinciden"); return; }
+    if (newPass.length < 8)      { setError("Mínimo 8 caracteres"); return; }
+    if (!/[A-Z]/.test(newPass))  { setError("Debe incluir al menos una letra mayúscula"); return; }
+    if (!/[!@#$%^&*(),.?":{}|<>_\-]/.test(newPass)) { setError("Debe incluir al menos un carácter especial (!@#$%&*)"); return; }
+    setDb(prev => ({
+      ...prev,
+      [target.col]: { ...prev[target.col], [target.id]: { ...prev[target.col][target.id], password: newPass } }
+    }));
+    alert("✓ Contraseña actualizada. Ya puedes iniciar sesión.");
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <style>{CSS}</style>
+      <div className="card modal-inner" style={{ width: "100%", maxWidth: 440, padding: 32 }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+          <div>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: T.tx1 }}>
+              {step === 1 ? "Recuperar contraseña" : "Nueva contraseña"}
+            </h2>
+            {step === 2 && <p style={{ fontSize: 12, color: T.tx3, marginTop: 3 }}>Paso 2 de 2 · ingresa el código y tu nueva clave</p>}
+          </div>
+          <button className="btn" onClick={onClose}>✕</button>
+        </div>
+
+        {step === 1 && (<>
+          <p style={{ fontSize: 13, color: T.tx3, marginBottom: 20, lineHeight: 1.65 }}>
+            Ingresa el correo con el que te registraste. Te enviaremos un código de 6 dígitos para restablecer tu contraseña.
+          </p>
+          <div style={{ marginBottom: 20 }}>
+            <label style={LBL}>CORREO ELECTRÓNICO</label>
+            <input className="input" type="email" value={inputEmail}
+              onChange={e => { setInputEmail(e.target.value); setError(""); }}
+              onKeyDown={e => e.key === "Enter" && handleSendCode()}
+              placeholder="correo@ejemplo.com" autoFocus />
+          </div>
+          {error && <div style={{ background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.3)", borderRadius: 14, padding: 14, color: T.rose, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>⚠ {error}</div>}
+          <div style={{ display: "flex", gap: 12 }}>
+            <button className="btn-primary" style={{ flex: 1, height: 48 }} onClick={handleSendCode} disabled={loading}>
+              {loading ? "Enviando..." : "Enviar código"}
+            </button>
+            <button className="btn" onClick={onClose}>Cancelar</button>
+          </div>
+        </>)}
+
+        {step === 2 && (<>
+          {info && <div style={{ background: "rgba(43,124,157,0.08)", border: "1px solid rgba(43,124,157,0.3)", borderRadius: 14, padding: 14, color: T.primary, fontSize: 13, fontWeight: 600, marginBottom: 20, lineHeight: 1.5 }}>✓ {info}</div>}
+          <div style={{ display: "grid", gap: 18, marginBottom: 20 }}>
+            <div>
+              <label style={LBL}>CÓDIGO DE VERIFICACIÓN *</label>
+              <input className="input" value={code}
+                onChange={e => { setCode(e.target.value.replace(/\D/g, "")); setError(""); }}
+                placeholder="123456" maxLength={6} autoFocus />
+            </div>
+            <div>
+              <label style={LBL}>NUEVA CONTRASEÑA *</label>
+              <input className="input" type="password" value={newPass}
+                onChange={e => { setNewPass(e.target.value); setError(""); }}
+                placeholder="••••••••" />
+              <p style={{ fontSize: 11, color: T.tx3, marginTop: 5, lineHeight: 1.5 }}>Mín. 8 caracteres · una mayúscula · un especial (!@#$%&*)</p>
+            </div>
+            <div>
+              <label style={LBL}>CONFIRMAR CONTRASEÑA *</label>
+              <input className="input" type="password" value={confirm}
+                onChange={e => { setConfirm(e.target.value); setError(""); }}
+                onKeyDown={e => e.key === "Enter" && handleReset()}
+                placeholder="••••••••" />
+            </div>
+          </div>
+          {error && <div style={{ background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.3)", borderRadius: 14, padding: 14, color: T.rose, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>⚠ {error}</div>}
+          <div style={{ display: "flex", gap: 12 }}>
+            <button className="btn" onClick={() => { setStep(1); setError(""); setCode(""); setNewPass(""); setConfirm(""); }}>← Volver</button>
+            <button className="btn-primary" style={{ flex: 1, height: 48 }} onClick={handleReset}>Cambiar contraseña</button>
+          </div>
+        </>)}
+      </div>
+    </div>
+  );
+};
+
+const Login = ({ onLogin, db, setDb }) => {
+  const [email, setEmail]         = useState("");
+  const [password, setPassword]   = useState("");
+  const [error, setError]         = useState("");
+  const [modalOlvide, setModalOlvide] = useState(false);
+
+  const isEmpresaActiva = (empresaId) => (db.facturacion?.[empresaId]?.activa) !== false;
 
   const handleLogin = () => {
     const em = email.trim().toLowerCase();
     const superAdm = Object.values(db.users || {}).find(u => u.role === "superadmin" && u.email?.toLowerCase() === em && u.password === password);
     if (superAdm) { onLogin({ role: "superadmin", email: em, id: superAdm.id, nombre: superAdm.nombre }); return; }
     const admin = Object.values(db.adminUsers).find(u => u.email.toLowerCase() === em && u.password === password);
-    if (admin) { onLogin({ role: "admin", email: em, id: admin.id, nombre: admin.nombre }); return; }
+    if (admin) {
+      if (!isEmpresaActiva(admin.empresaId)) { setError("Tu empresa está desactivada. Contacta al administrador de Voff App."); return; }
+      onLogin({ role: "admin", email: em, id: admin.id, nombre: admin.nombre }); return;
+    }
     const cli = Object.values(db.clientes).find(u => u.email.toLowerCase() === em && u.password === password);
-    if (cli) { onLogin({ role: "cliente", email: em, id: cli.id, nombre: `${cli.nombres} ${cli.apellidos}` }); return; }
+    if (cli) {
+      if (!isEmpresaActiva(cli.empresaId)) { setError("El servicio de tu veterinaria no está disponible en este momento."); return; }
+      onLogin({ role: "cliente", email: em, id: cli.id, nombre: `${cli.nombres} ${cli.apellidos}` }); return;
+    }
     setError("Credenciales incorrectas");
   };
 
@@ -2332,6 +2780,12 @@ const Login = ({ onLogin, db }) => {
           <button className="btn-primary" style={{ width: "100%", height: 52, fontSize: 15 }} onClick={handleLogin}>
             Entrar
           </button>
+          <button
+            onClick={() => setModalOlvide(true)}
+            style={{ background: "none", border: "none", cursor: "pointer", color: T.primary, fontSize: 13, fontWeight: 600, textAlign: "center", padding: "4px 0", textDecoration: "underline", textUnderlineOffset: 3 }}
+          >
+            ¿Olvidaste tu contraseña?
+          </button>
         </div>
 
         {/* Slogan */}
@@ -2341,6 +2795,8 @@ const Login = ({ onLogin, db }) => {
           </p>
         </div>
       </div>
+
+      {modalOlvide && <ModalOlvideClave db={db} setDb={setDb} onClose={() => setModalOlvide(false)} />}
     </div>
   );
 };
@@ -3686,10 +4142,7 @@ const PanelBasico = ({ auth, onLogout, db, setDb }) => {
         {/* ── INICIO ── */}
         {tab === "inicio" && (
           <div>
-            <div className="card" style={{ padding: "22px 28px", marginBottom: 28, display: "flex", alignItems: "center", gap: 18 }}>
-              <div className="inset" style={{ width: 52, height: 52, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <LogoImg size={48} />
-              </div>
+            <div className="card" style={{ padding: "22px 28px", marginBottom: 28 }}>
               <div style={{ flex: 1 }}>
                 <h2 style={{ fontSize: 20, fontWeight: 800, color: T.tx1 }}>Bienvenido, {cliente.nombres}</h2>
                 <p style={{ fontSize: 13, color: T.tx3, marginTop: 3 }}>{empresa?.nombre || ""} · {new Date().toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: COL_TZ })}</p>
@@ -4296,7 +4749,8 @@ export default function PetFlow() {
         const remote = snap.data();
         setDb({
           ...remote,
-          ajustes: { ...INITIAL_DB.ajustes, ...remote.ajustes },
+          ajustes:      { ...INITIAL_DB.ajustes, ...remote.ajustes },
+          facturacion:  { ...(remote.facturacion || {}) },
         });
       } else {
         // Primera vez: siembra la BD con los datos iniciales
@@ -4322,7 +4776,7 @@ export default function PetFlow() {
   return (
     <>
       <NotifPermissionBanner />
-      {!auth && <Login onLogin={setAuth} db={db} />}
+      {!auth && <Login onLogin={setAuth} db={db} setDb={setDb} />}
       {auth?.role === "superadmin" && <PanelSuperAdmin onLogout={() => setAuth(null)} db={db} setDb={setDb} />}
       {auth?.role === "admin"      && <PanelAdmin auth={auth} onLogout={() => setAuth(null)} db={db} setDb={setDb} />}
       {auth?.role === "cliente"    && <PanelBasico auth={auth} onLogout={() => setAuth(null)} db={db} setDb={setDb} />}
